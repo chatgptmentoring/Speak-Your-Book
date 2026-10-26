@@ -31,8 +31,12 @@ const isSoon = (b) => b.status === 'coming-soon';
 const authorName = (b) => b.displayAuthor || b.author;
 const coverSrc = (b, size) => `assets/img/covers/${b.slug}-${size}.webp`;
 const pad2 = (n) => String(n).padStart(2, '0');
-const initials = (name) => name.split(/\s+/).filter((w) => /^\p{Lu}/u.test(w)).map((w) => w[0]).slice(0, 2).join('');
+const initials = (name) => { const w = name.split(/\s+/).filter((x) => /^\p{Lu}/u.test(x)); return w.length ? w[0][0] + (w.length > 1 ? w[w.length - 1][0] : '') : ''; };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// an author's photo in a gold ring, or their initials until the photo arrives
+const avatar = (a, sm) => a.photo
+  ? `<img class="au__photo${sm ? ' au__mono--sm' : ''}" src="${esc(a.photo)}" alt="" loading="lazy">`
+  : `<span class="au__mono${sm ? ' au__mono--sm' : ''}" aria-hidden="true">${esc(initials(a.name))}</span>`;
 const hashStr = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return Math.abs(h); };
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -684,7 +688,7 @@ const Detail = (() => {
   function authorCard(au) {
     const here = People.isOnline(au.id);
     return `<div class="bi__meet${here ? ' is-online' : ''}">
-      <span class="au__mono au__mono--sm" aria-hidden="true">${esc(initials(au.name))}</span>
+      ${avatar(au, true)}
       <span class="bi__meet-text"><b>${esc(au.displayName)}</b><small>${here ? '● At the fair right now' : EventInfo && EventInfo.upcoming() ? `Speaking live · ${esc(EventInfo.dayShort())}` : 'Author'}</small></span>
       <button class="btn btn--ghost btn--sm" type="button" data-author="${au.id}">Meet</button>
       ${au.inbox ? `<button class="icon-btn" type="button" data-author-msg="${au.id}" aria-label="Send ${esc(au.displayName)} a message">✉</button>` : ''}</div>`;
@@ -1105,7 +1109,7 @@ const EventUI = (() => {
     setText('time', EventInfo.time() ? ` · ${EventInfo.time()}` : '');
     setText('count', st.count ? ` · ${st.count}` : '');
     setText('about', EVENT.about);
-    setText('lineup-title', after ? 'The authors' : 'Speaking live');
+    setText('lineup-title', `${after ? 'The authors' : 'Speaking live'} · ${AUTHORS.length}`);
     setText('fine', `Hosted by Life Coach Code · ${EVENT.price.toLowerCase()} to attend`);
     $$('[data-event="countdown"]').forEach((el) => {
       el.innerHTML = after ? '' : `<b>${esc(st.big === 'TODAY' ? 'Today' : st.big)}</b><span>${esc(st.big === 'TODAY' ? 'live on Zoom' : st.label.toLowerCase())}</span>`;
@@ -1130,8 +1134,9 @@ const EventUI = (() => {
       const b = bySlug[a.books[0]];
       const here = People.isOnline(a.id);
       return `<li><button type="button" data-place="book-${b.slug}">
-        <img src="${coverSrc(b, 480)}" alt="" loading="lazy">
-        <span><b>${esc(a.displayName)}</b><small>${(EVENT.schedule || []).filter((x) => x.author === a.id).map((x) => esc(x.time) + ' · ').join('')}${a.books.map((s) => esc(bySlug[s].title)).join(' · ')}</small>${here ? '<em>● At the fair now</em>' : ''}</span></button></li>`;
+        ${avatar(a, true)}
+        <span><b>${esc(a.displayName)}</b><small>${(EVENT.schedule || []).filter((x) => x.author === a.id).map((x) => esc(x.time) + ' · ').join('')}${a.books.map((s) => esc(bySlug[s].title)).join(' · ')}</small>${here ? '<em>● At the fair now</em>' : ''}</span>
+        <img class="lu__cover" src="${coverSrc(b, 480)}" alt="" loading="lazy"></button></li>`;
     }).join('');
   }
   function init() {
@@ -1175,7 +1180,7 @@ const AuthorPanel = (() => {
     const here = People.onlinePeer(a.id);
     const books = a.books.map((s) => bySlug[s]);
     $('#author-body').innerHTML = `
-      <div class="au__head">${a.photo ? `<img class="au__photo" src="${esc(a.photo)}" alt="">` : `<span class="au__mono" aria-hidden="true">${esc(initials(a.name))}</span>`}
+      <div class="au__head">${avatar(a)}
         <div><p class="eyebrow">Meet the author</p><h2 class="sheet__title" id="au-name">${esc(a.displayName)}</h2>${a.credentials ? `<p class="au__cred">${esc(a.credentials)}</p>` : ''}</div></div>
       <div class="au__chips">
         <span class="au__status${here ? ' is-online' : ''}"><i></i>${here ? 'Here at the fair now' : EventInfo && EventInfo.upcoming() ? `Speaking live · ${esc(EventInfo.dayShort())}` : 'Author at the fair'}</span>
@@ -1417,8 +1422,7 @@ const People = (() => {
       if (ok) {
         selfAuthor = link.id;
         world.setAuthorOnline(link.id, true);
-        const a = authorById[link.id];
-        setTimeout(() => toast(`<i>✦</i> Welcome, ${esc(a.displayName)}. Visitors see you as the author, glowing gold.`, 6500), 2500);
+        setTimeout(() => AuthorHi.show(authorById[link.id]), 1800);
         track('author_online', { author: link.id });
       } else {
         store.set(AKEY, null);
@@ -1585,6 +1589,7 @@ const Creator = (() => {
     world.setCustomBook({ canvas, colors, title: saved.title, subtitle: saved.subtitle, name: saved.name });
   }
   function syncCards() {
+    Spot.render();
     $$('[data-mybook="postcard"]').forEach((b) => { b.hidden = !saved; });
     $$('[data-mybook="edit"]').forEach((b) => { b.textContent = saved ? 'Edit my cover' : 'Design my cover'; });
     $$('[data-mybook="line"]').forEach((l) => { l.textContent = saved ? `“${saved.title}” is on the pedestal. Take a postcard home, or make it real with a free discovery call.` : 'Picture it first: design your cover and set it on this pedestal.'; });
@@ -1641,6 +1646,77 @@ const Creator = (() => {
     syncCards();
   }
   return { init, apply, postcard, open: () => sheet.open(), has: () => !!saved, title: () => (saved ? saved.title : '') };
+})();
+
+/* =========================================================================
+   The one next step, always in reach: visitors make their own book, authors go to their booth
+   ========================================================================= */
+const Spot = (() => {
+  const el = $('#spot');
+  let author = null;
+  function render() {
+    if (author) {
+      $('#spot-icon').innerHTML = avatar(author, true);
+      $('#spot-title').textContent = 'Go to my booth';
+      $('#spot-sub').textContent = 'Visitors look for you there';
+    } else {
+      $('#spot-title').textContent = Creator.has() ? 'Your book' : 'Make your book';
+      $('#spot-sub').textContent = Creator.has() ? 'Edit it or get your postcard' : 'Put it in the fair';
+    }
+    el.classList.toggle('spot--author', !!author);
+  }
+  function init() {
+    el.hidden = false;
+    render();
+    el.addEventListener('click', () => {
+      if (author) { AuthorHi.go(); return; }
+      track('spot_creator');
+      Creator.open();
+    });
+  }
+  return { init, render, setAuthor(a) { author = a; render(); } };
+})();
+
+/* When an author opens their private link: a warm welcome and one clear first step */
+const AuthorHi = (() => {
+  const sheet = makeSheet('author-hi');
+  const SEEN = 'lcc-fair-author-hi';
+  let a = null;
+  function go() {
+    if (!a) return;
+    sheet.close();
+    goPlace('book-' + a.books[0]);
+    track('author_go_booth', { author: a.id });
+    setTimeout(() => toast(`<i>✦</i> You're at your booth. When visitors come by they can wave, and you can wave back${finePointer ? ' with <b>E</b>' : ''}.`, 7000), 2600);
+  }
+  function show(au) {
+    a = au;
+    Spot.setAuthor(au);
+    const first = au.name.split(/\s+/)[0];
+    const day = isEventDay() && !!ZOOM;
+    const after = !!EventInfo && EventInfo.status().phase === 'after';
+    $('#ah-face').innerHTML = avatar(au);
+    $('#ah-title').textContent = `Welcome, ${first}`;
+    const zs = $('#ah-zoom-step');
+    zs.hidden = !ZOOM || after;
+    zs.classList.toggle('is-first', day);
+    $('#ah-zoom').href = ZOOM || '#';
+    $('#ah-zoom').innerHTML = `${ZOOM_ICON} Join on Zoom`;
+    $('#ah-zoom').classList.toggle('btn--gold', day);
+    $('#ah-zoom').classList.toggle('btn--ghost', !day);
+    $('#ah-go').classList.toggle('btn--gold', !day);
+    $('#ah-go').classList.toggle('btn--ghost', day);
+    $$('.ah__num', sheet.el).forEach((n, i) => { n.textContent = String(day ? 2 - i : i + 1); });
+    let seen = false;
+    try { seen = sessionStorage.getItem(SEEN) === au.id; sessionStorage.setItem(SEEN, au.id); } catch (e) { /* private mode */ }
+    if (seen) toast(`<i>✦</i> Welcome back, ${esc(first)}. Visitors see you glowing gold.`, 6500, { label: 'Go to my booth', fn: go });
+    else sheet.open();
+  }
+  function init() {
+    $('#ah-go').addEventListener('click', go);
+    $('#ah-zoom').addEventListener('click', () => track('zoom_join', { from: 'author' }));
+  }
+  return { init, show, go };
 })();
 
 /* =========================================================================
@@ -1960,6 +2036,8 @@ async function boot() {
   EventUI.init();
   People.init();
   Creator.init();
+  Spot.init();
+  AuthorHi.init();
   Tour.init();
   More.init();
   LiveStream.init();
@@ -2014,7 +2092,7 @@ async function boot() {
     world = await createWorld({
       canvas: $('#world'),
       books: BOOKS,
-      authors: AUTHORS.map((a) => ({ id: a.id, name: a.displayName, books: a.books })),
+      authors: AUTHORS.map((a) => ({ id: a.id, name: a.displayName, books: a.books, photo: a.photo || '', mono: initials(a.name) })),
       leftInset: () => {
         const r = $('#tour').getBoundingClientRect();
         return clamp((r.right + 8) / window.innerWidth, 0, 0.5);

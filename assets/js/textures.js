@@ -1300,13 +1300,21 @@ export function drawEventScreen(canvas, kind, d) {
     const names = d.names;
     const cols = names.length > 6 ? 2 : 1;
     const rows = Math.ceil(names.length / cols);
-    const size = Math.round(Math.min(H * 0.062, (H * 0.58) / rows / 1.25));
+    let size = Math.round(Math.min(H * 0.062, (H * 0.58) / rows / 1.25));
     ctx.font = `500 ${size}px ${SERIF}`;
+    const lineH = size * 1.25;
+    // every name fits its column, however long
+    const room = cols === 2 ? W * 0.39 : W * 0.6;
+    const widest = Math.max(...names.map((n) => ctx.measureText(n).width));
+    if (widest > room) {
+      size = Math.floor(size * room / widest);
+      ctx.font = `500 ${size}px ${SERIF}`;
+    }
     names.forEach((n, i) => {
       const col = cols === 2 ? Math.floor(i / rows) : 0;
       const row = cols === 2 ? i % rows : i;
       const x = cols === 2 ? W * (col ? 0.73 : 0.27) : W / 2;
-      const y = H * 0.36 + row * size * 1.25;
+      const y = H * 0.36 + row * lineH;
       ctx.fillStyle = GOLD;
       star(ctx, x - W * 0.2, y, size * 0.2, 4);
       ctx.fillStyle = '#fbf0dc';
@@ -1368,4 +1376,28 @@ export function emoteTexture(emoji) {
   const t = toTexture(c);
   emoteCache.set(emoji, t);
   return t;
+}
+
+/* An author's initials in gold, for the portrait medallion until their photo arrives. */
+export function monogramTexture(initials) {
+  const S = 256;
+  const c = makeCanvas(S, S);
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(S * 0.42, S * 0.36, 8, S / 2, S / 2, S * 0.62);
+  g.addColorStop(0, '#5a2f63');
+  g.addColorStop(0.6, '#2a1433');
+  g.addColorStop(1, '#12091a');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+  ctx.beginPath();
+  ctx.arc(S / 2, S / 2, S * 0.43, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(226,189,120,.55)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `600 ${Math.round(S * 0.4)}px ${SERIF}`;
+  ctx.fillStyle = goldGradient(ctx, 0, S * 0.3, 0, S * 0.7);
+  ctx.fillText(initials, S / 2, S / 2 + S * 0.02);
+  return toTexture(c);
 }

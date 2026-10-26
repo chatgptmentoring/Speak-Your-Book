@@ -14,8 +14,9 @@ event and discover how to speak their own book (free discovery call).
 - **A candlelit hall of 15 booths** (9 published books and 6 coming soon). Each booth has a poster,
   the book on a pedestal, and a hand-made piece that carries the spirit of the book. *Food Isn't
   the Problem* has its 3-Step Path: Name it, Claim it, Reframe it.
-- **Meet the authors**: beside every booth the author waits as a hologram. Press `E` to meet
-  them: their books, their credentials, and an invitation to hear them live on 1 November.
+- **Meet the authors**: beside every booth the author waits as a hologram, with their portrait
+  in a gold ring above it. Press `E` to meet them: their books, their credentials, and an
+  invitation to hear them live on 1 November.
 - **Look inside**: open a book and turn its pages in 3D (click the book, or use the arrows in the
   booth panel). The pages show the book's own words: title page, opening line, contents, the
   description and who it is for.
@@ -25,8 +26,8 @@ event and discover how to speak their own book (free discovery call).
 - **Live presence**: everyone in the fair at the same moment sees each other as glowing figures
   with a first name. Visitors can wave (`E` when facing someone) and send reactions (`1` to `5`).
   Authors who open their private link glow gold, and their booth hologram says *Here now*.
-- **Your book at the fair**: design a cover (title, name, style) and set it on the last
-  pedestal, then take home a postcard of it.
+- **Your book at the fair**: a gold *Make your book* button is always in reach. Design a cover
+  (title, name, style), set it on the last pedestal, then take home a postcard of it.
 - **Guided tour** with captions and optional spoken narration, **photo mode** with a Life Coach
   Code frame, a **Fair Passport** with a certificate for touring every booth, generative **music**
   with a spatial soundscape per booth, the **Book Oracle**, and a **map**.
@@ -81,6 +82,10 @@ the posters, the stage screens, the calendar file and the event panel all read f
 Each author can have a private link. Whoever opens it appears to everyone in the fair as that
 author, glowing gold, and the author's booth hologram lights up with *Here now*. Visitors get a
 notice that the author has arrived, and can walk over and wave.
+
+When an author opens their link, a welcome card greets them with one clear first step: a big
+**Go to my booth** button (and **Join on Zoom**, which comes first on the day of the event). The
+gold button in the corner then becomes *Go to my booth* for them.
 
 The links contain a private key. The fair stores only the matching public keys
 (`FAIR_LIVE.authorKeys` in `books.js`), so nobody can pretend to be an author.
@@ -191,6 +196,11 @@ event on `window`. To record them, add Plausible or Google Analytics to `index.h
     (reader quotes);
   - per author, in `FAIR_AUTHOR_EXTRAS`: `photo`, `welcome` (a short message), `voice` (a recorded
     welcome, mp3) and `website`.
+- **Author photos:** run `python3 tools/make_author_photo.py path/to/photo.jpg author-id` (add
+  `--cy 0.35 --zoom 1.3` to frame the face), then set
+  `photo: 'assets/img/authors/author-id.webp'` for that author in `FAIR_AUTHOR_EXTRAS`. The photo
+  appears in the gold ring above their hologram, in their panel, at their booth and in the event
+  lineup. Until then, their initials stand in.
 - **Discovery call / Speak Your Book / Solutions links:** `FAIR_LINKS` in `books.js` and the
   links in `index.html`.
 - **Logo and pillar symbols:** `assets/img/brand/` (SVG, plus PNG copies of the logo for
@@ -214,6 +224,7 @@ assets/js/guide.js       the AI guide (built-in answers + OpenAI through the plu
 assets/img/covers/       optimised covers (480 / 800 / full / glow)
 assets/img/originals/    the covers as supplied
 tools/make_covers.py     prepares covers for a new book
+tools/make_author_photo.py  prepares an author's photo
 tools/author-links.mjs   makes private author links
 tools/lcc-fair-guide/    the WordPress plugin that connects the guide to OpenAI (+ .zip)
 ```

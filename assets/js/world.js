@@ -704,8 +704,35 @@ export async function createWorld(opts) {
   const holoParts = {
     pillar: new THREE.CylinderGeometry(0.08, 0.12, 0.92, 20),
     disc: new THREE.CylinderGeometry(0.15, 0.15, 0.03, 32),
-    beam: new THREE.CylinderGeometry(0.11, 0.42, 0.62, 24, 1, true).rotateX(Math.PI)
+    beam: new THREE.CylinderGeometry(0.11, 0.42, 0.62, 24, 1, true).rotateX(Math.PI),
+    face: new THREE.CircleGeometry(0.27, 48),
+    ring: new THREE.TorusGeometry(0.285, 0.022, 12, 72),
+    back: new THREE.CircleGeometry(0.3, 48).rotateY(Math.PI)
   };
+  const photoLoader = new THREE.TextureLoader();
+  // the author's portrait in a gold ring above the hologram: their photo, or their initials until it arrives
+  function buildMedallion(author) {
+    const g = new THREE.Group();
+    const faceMat = new THREE.MeshBasicMaterial({ map: T.monogramTexture(author.mono || author.name.slice(0, 1)) });
+    if (author.photo) {
+      photoLoader.load(author.photo, (t) => {
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = maxAniso;
+        faceMat.map = t;
+        faceMat.needsUpdate = true;
+      });
+    }
+    const face = new THREE.Mesh(holoParts.face, faceMat);
+    const ring = new THREE.Mesh(holoParts.ring, mat.gold);
+    const back = new THREE.Mesh(holoParts.back, mat.gold);
+    back.position.z = -0.012;
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.radial, color: 0xffd9a0, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }));
+    halo.scale.set(1.05, 1.05, 1);
+    halo.position.z = -0.05;
+    g.add(halo, back, face, ring);
+    g.userData.hit = [face, ring];
+    return g;
+  }
   const holoMats = [];
   const authorOf = {};
   authors.forEach((a) => a.books.forEach((slug) => { authorOf[slug] = a; }));
@@ -715,6 +742,7 @@ export async function createWorld(opts) {
     if (!tagCache.has(key)) tagCache.set(key, T.nameTagTexture(name, sub, o));
     return tagCache.get(key);
   };
+  const medLook = new V3();
   function buildHolo(author, book) {
     const g = new THREE.Group();
     const m = holoMaterial(new THREE.Color(1.0, 0.72, 0.38), 0.9);
@@ -732,9 +760,11 @@ export async function createWorld(opts) {
     const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTexture(author.name, 'Meet the author'), transparent: true, depthWrite: false }));
     tag.scale.set(0.98, 0.98 * 168 / 640, 1);
     tag.position.y = 2.14;
-    g.add(pillar, disc, beam, bust, tag);
+    const med = buildMedallion(author);
+    med.position.y = 2.66;
+    g.add(pillar, disc, beam, bust, tag, med);
     const info = { kind: 'author', id: author.id, slug: book.slug };
-    [bust, pillar, tag].forEach((o) => { o.userData.info = info; clickables.push(o); });
+    [bust, pillar, tag, ...med.userData.hit].forEach((o) => { o.userData.info = info; clickables.push(o); });
     const phase = Math.random() * 6.28;
     const h = { group: g, info, online: 0, onlineT: 0, author };
     h.setOnline = (on) => {
@@ -746,6 +776,10 @@ export async function createWorld(opts) {
       h.onlineT = damp(h.onlineT, h.online, 3, dt);
       bust.rotation.y = Math.sin(t * 0.4 + phase) * 0.35;
       bust.position.y = 1.15 + Math.sin(t * 1.1 + phase) * 0.015;
+      // the portrait turns gently to whoever is looking
+      g.worldToLocal(medLook.copy(camera.position));
+      med.rotation.y = damp(med.rotation.y, Math.atan2(medLook.x, medLook.z), 2.5, dt);
+      med.position.y = 2.66 + Math.sin(t * 0.9 + phase) * 0.025;
       m.uniforms.uOpacity.value = 0.85 + 0.35 * h.onlineT;
       beamMat.uniforms.uOpacity.value = 0.2 + 0.2 * h.onlineT;
     };

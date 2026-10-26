@@ -366,6 +366,27 @@
   </div>
 
   <!-- Who's here -->
+  <div class="sheet sheet--author-hi" id="author-hi" role="dialog" aria-modal="true" aria-labelledby="ah-title" hidden>
+    <div class="sheet__backdrop" data-close></div>
+    <div class="sheet__panel">
+      <button class="sheet__close icon-btn" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="ah__face" id="ah-face"></div>
+      <p class="eyebrow ah__eyebrow">&#10022; You&rsquo;re here as the author</p>
+      <h2 class="sheet__title ah__title" id="ah-title">Welcome</h2>
+      <p class="ah__lead" id="ah-lead">Visitors see you glowing gold, and your booth says <b>Here now</b>.</p>
+      <div class="ah__step">
+        <span class="ah__num" aria-hidden="true">1</span>
+        <button class="btn btn--gold btn--lg ah__go" type="button" id="ah-go">Go to my booth &rarr;</button>
+        <small id="ah-why">Stand by your book so visitors can find you and wave.</small>
+      </div>
+      <div class="ah__step ah__step--next" id="ah-zoom-step" hidden>
+        <span class="ah__num" aria-hidden="true">2</span>
+        <a class="btn btn--ghost btn--lg btn--zoom" id="ah-zoom" href="#" target="_blank" rel="noopener">Join on Zoom</a>
+        <small>Your talk happens live on Zoom.</small>
+      </div>
+    </div>
+  </div>
+
   <div class="sheet" id="people-panel" role="dialog" aria-modal="true" aria-labelledby="pp-title" hidden>
     <div class="sheet__backdrop" data-close></div>
     <div class="sheet__panel">
@@ -485,6 +506,12 @@
       <span class="guide__label">Guide</span>
     </button>
   </div>
+
+  <!-- The one thing to do next: visitors make their book, authors go to their booth -->
+  <button class="spot" id="spot" type="button" hidden>
+    <span class="spot__icon" id="spot-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5C6.5 4.3 9.3 4.4 12 6c2.7-1.6 5.5-1.7 8-.5v13c-2.5-1.2-5.3-1.1-8 .5-2.7-1.6-5.5-1.7-8-.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 6v13" stroke="currentColor" stroke-width="1.6"/><path d="M17.5 1.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" fill="currentColor"/></svg></span>
+    <span class="spot__text"><b id="spot-title">Make your book</b><small id="spot-sub">Put it in the fair</small></span>
+  </button>
 
   <!-- The live talks, beside you as you explore -->
   <section class="live" id="live" aria-label="Live stream of the event" data-mode="dock" hidden>
