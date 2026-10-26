@@ -9,15 +9,29 @@ the author's hologram, in the author's panel, at the booth and in the event line
 
 --cx / --cy: the centre of the face, as a fraction of the width / height (default: centred, a
 little above the middle). --zoom: how much closer than the largest square (1 = the whole short side).
+--pad: room to add above the head when the photo stops right at the hair, as a fraction of the
+height (the background is extended softly).
 Needs Pillow.
 """
 import argparse
 import pathlib
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / 'assets' / 'img' / 'authors'
+
+
+def pad_top(im, n):
+    # stretch the top row of the background upwards, then soften it so it reads as background
+    w, h = im.size
+    strip = im.crop((0, 0, w, 6)).resize((w, n), Image.BILINEAR).filter(ImageFilter.GaussianBlur(12))
+    out = Image.new('RGB', (w, h + n))
+    out.paste(strip, (0, 0))
+    out.paste(im, (0, n))
+    blend = out.crop((0, n - 8, w, n + 8)).filter(ImageFilter.GaussianBlur(4))
+    out.paste(blend, (0, n - 8))
+    return out
 
 
 def main():
@@ -28,9 +42,12 @@ def main():
     ap.add_argument('--cy', type=float, default=None)
     ap.add_argument('--zoom', type=float, default=1.0)
     ap.add_argument('--size', type=int, default=400)
+    ap.add_argument('--pad', type=float, default=0.0)
     a = ap.parse_args()
 
     im = ImageOps.exif_transpose(Image.open(a.src)).convert('RGB')
+    if a.pad > 0:
+        im = pad_top(im, round(im.size[1] * a.pad))
     w, h = im.size
     side = min(w, h) / max(1.0, a.zoom)
     cy = a.cy if a.cy is not None else (0.42 if w >= h else (side / 2 + 0.02 * h) / h)

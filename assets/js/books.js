@@ -545,6 +545,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     bio: 'A non-diet registered dietitian and the founder of L I T Wellness Solutions, offering non-diet nutrition care, wellness integration and health coaching under the motto “IGNITE the Change Within”.'
   },
   'jessica-v-fuentes': {
+    photo: 'assets/img/authors/jessica-v-fuentes.webp',
     inbox: 'jessica.fuentes@empowered-selflove.com',
     website: 'https://empowered-selflove.com/',
     linkedin: 'https://www.linkedin.com/in/jessica-v-fuentes-cpc-03679a20/',
@@ -557,6 +558,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     profile: 'https://www.lifecoachcode.com/members/jennifer-schmeisser/'
   },
   'monika-puiu': {
+    photo: 'assets/img/authors/monika-puiu.webp',
     inbox: 'monika.puiu@wayra-astrae.ro',
     website: 'https://wayra-astrae.ro/',
     linkedin: 'https://www.linkedin.com/in/monika-maria-puiu/',
@@ -577,6 +579,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     profile: 'https://www.lifecoachcode.com/members/yevheniya-shalimova/'
   },
   'rachel-tamilio': {
+    photo: 'assets/img/authors/rachel-tamilio.webp',
     inbox: 'rtamilio.unshackledcoach@gmail.com',
     linkedin: 'https://www.linkedin.com/in/rtamilio/',
     interview: 'https://www.lifecoachcode.com/2023/09/06/find-life-coach-rachel-tamilio/'
