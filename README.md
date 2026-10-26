@@ -42,6 +42,10 @@ event and discover how to speak their own book (free discovery call).
 | Click any book to open it, click an open book to turn its pages | Tap any book to open it |
 | `M` map, `P` photo, `T` guided tour, `1` to `5` reactions, `Esc` to leave a booth | The `⋯` menu in the top bar |
 
+On phones the fair opens clean: no cards, logo or buttons over the view, just the 3D hall, the
+thumb joystick and the `E` button when something can be opened. Everything else (make your
+book, the live event, the guide, the map, the passport, the discovery call) is in the `⋯` menu.
+
 Browsers without WebGL get a readable, scrolling version of the same content.
 
 ## Publish on GitHub Pages

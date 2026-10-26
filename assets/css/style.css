@@ -1651,3 +1651,17 @@ details.au__bio p { margin-top: 6px; }
   .sheet--author-hi .sheet__panel { width: 100%; padding-top: 30px; }
 }
 @media (prefers-reduced-motion: reduce) { .spot, .spot::after, .ah__go { animation: none; } }
+
+/* ---------- phones: a clean view to explore, with everything one tap away in the menu ---------- */
+.more__clean { display: none !important; }
+.more__gold b { color: var(--gold-hi); }
+.more__gold i { background: linear-gradient(135deg, #fbe7bb, #c8964a); color: #221606; border: 0; }
+@media (pointer: coarse) and (max-width: 760px), (pointer: coarse) and (max-height: 500px) {
+  .is-3d .brand, .is-3d .event-pill, .is-3d .people-btn, .is-3d .passport-btn, .is-3d .map-btn, .is-3d .photo-btn, .is-3d .sound-btn, .is-3d .hud__cta,
+  .is-3d .tour, .is-3d .spot, .is-3d .guide:not(.is-open) { display: none !important; }
+  .is-3d .more__clean:not([hidden]), .is-3d .more__mobile { display: flex !important; }
+  html:not(.is-author).is-3d .more [data-do='creator']:not([data-visitor]) { display: none !important; }
+  .is-3d .hud { justify-content: flex-end; }
+  .is-3d .more-btn { width: 42px; height: 42px; background: rgba(14, 10, 20, .4); border-color: rgba(226, 189, 120, .3); }
+  .is-3d .more { max-height: calc(100svh - var(--hud-h) - 16px); overflow-y: auto; }
+}

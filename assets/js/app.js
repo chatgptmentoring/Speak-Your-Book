@@ -562,7 +562,7 @@ const Passport = (() => {
       certificate(name);
     });
   }
-  return { init, stamp, has, count: () => got.length, isOpen: () => !el.hidden };
+  return { init, open, stamp, has, count: () => got.length, isOpen: () => !el.hidden };
 })();
 
 /* =========================================================================
@@ -1664,6 +1664,9 @@ const Spot = (() => {
       $('#spot-sub').textContent = Creator.has() ? 'Edit it or get your postcard' : 'Put it in the fair';
     }
     el.classList.toggle('spot--author', !!author);
+    $$('[data-do="mybooth"]').forEach((b) => { b.hidden = !author; });
+    $$('[data-visitor]').forEach((b) => { b.hidden = !!author; });
+    document.documentElement.classList.toggle('is-author', !!author);
   }
   function init() {
     el.hidden = false;
@@ -1845,6 +1848,8 @@ function doAction(name) {
     case 'sound': Sound.toggle(); break;
     case 'guide': if (Guide) Guide.open(); break;
     case 'watch': LiveStream.open(); break;
+    case 'passport': Passport.open(); break;
+    case 'mybooth': AuthorHi.go(); break;
     default:
   }
 }
@@ -2111,6 +2116,8 @@ async function boot() {
     Creator.apply();
     Sound.worldReady();
     People.start();
+    // on phones the controls hint steps aside by itself, leaving the fair clear to explore
+    if (!finePointer) setTimeout(() => Hints.moved(), 5000);
     const hashId = location.hash.slice(1);
     const startPlace = hashId && !hashId.startsWith('booth/') && world.places.some((p) => p.id === hashId) ? hashId : null;
     if (startPlace) { world.travelTo(startPlace, { instant: true }); Context.show(startPlace); }
