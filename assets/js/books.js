@@ -499,6 +499,7 @@ window.FAIR_AUTHOR_EXTRAS = {
   // inbox: where "Send a message" goes (see FAIR_CONTACT below). Leave it empty to hide the button.
   // bio: shown in the author's panel and used by the guide. Keep it to what the author has published.
   'soonjin-cho': {
+    photo: 'assets/img/authors/soonjin-cho.webp',
     inbox: 'hugloveheal@gmail.com',
     linkedin: 'https://www.linkedin.com/in/soonjin-cho-b2bba0254/',
     interview: 'https://www.lifecoachcode.com/2024/07/28/find-life-coach-soonjin-cho/'
@@ -518,6 +519,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     bio: 'Author, speaker and Champion’s Mindset mentor for teens, families, athletes, homeschoolers and entrepreneurs, after 30 years in education. Chuck holds a master’s degree in special education and certifications in NLP and hypnotherapy.'
   },
   'sonia-jenkins': {
+    photo: 'assets/img/authors/sonia-jenkins.webp',
     inbox: 'hello@soniajenkins.co.uk',
     website: 'https://soniajenkins.co.uk/',
     linkedin: 'https://www.linkedin.com/in/soniajenkinsfmchc/',
@@ -525,6 +527,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     bio: 'A Certified Functional Medicine Health Coach in Wales, drawing on more than 45 years as an NHS health professional. Sonia works with high-achieving women over 40 on healthy ageing, stress and energy.'
   },
   'susan-j-razavi': {
+    photo: 'assets/img/authors/susan-j-razavi.webp',
     inbox: 'susanjrazavi@gmail.com',
     website: 'https://tranceplan.com/',
     websiteByLCC: true,
@@ -533,6 +536,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     bio: 'A veteran psychotherapist (LCSW-R) and clinical hypnotherapist in New York, with an integrative approach that bridges science, mindfulness and spirituality. Susan developed TrancePlan, a personalised approach to hypnotherapy.'
   },
   'tanya-fasnacht-jolliffe': {
+    photo: 'assets/img/authors/tanya-fasnacht-jolliffe.webp',
     inbox: 'tanya@litwellnesssolutions.com',
     website: 'https://litwellnesssolutions.com/',
     websiteByLCC: true,
@@ -565,6 +569,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     profile: 'https://www.lifecoachcode.com/members/beth-donovan/'
   },
   'yevheniya-shalimova': {
+    photo: 'assets/img/authors/yevheniya-shalimova.webp',
     inbox: 'evgenia7shalimova@gmail.com',
     website: 'https://theshalimovamethod.com/',
     websiteByLCC: true,
