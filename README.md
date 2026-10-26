@@ -5,7 +5,9 @@ A walkable 3D book fair floating in space, hosted by **Life Coach Code**, and th
 It runs as a page on lifecoachcode.com through a WordPress plugin, or on its own on GitHub Pages.
 Visitors land straight inside the fair. They can walk from booth to booth, open each book in 3D,
 meet the authors, and see the other people walking the fair. They can register for the live
-event and discover how to speak their own book (free discovery call).
+event at any time (the form opens right inside the fair), join the talks on Zoom once the event
+starts, and, if they want to create a book of their own, book a free discovery call with Life
+Coach Code.
 
 ## What's inside
 
@@ -15,8 +17,8 @@ event and discover how to speak their own book (free discovery call).
 - **A candlelit hall of 16 booths** (9 published books and 7 coming soon). Each booth has a poster,
   the book on a pedestal, and a hand-made piece that carries the spirit of the book. *Food Isn't
   the Problem* has its 3-Step Path: Name it, Claim it, Reframe it.
-- **Meet the authors**: beside every booth the author waits as a hologram, with their portrait
-  in a gold ring above it. Press `E` to meet them: their books, their credentials, and an
+- **Meet the authors**: beside every booth the author's portrait rises from a beam of light in
+  a gold ring, under their name. Press `E` to meet them: their books, their credentials, and an
   invitation to hear them live on 1 November.
 - **Look inside**: open a book and turn its pages in 3D (click the book, or use the arrows in the
   booth panel). The pages show the book's own words: title page, opening line, contents, the
@@ -26,7 +28,7 @@ event and discover how to speak their own book (free discovery call).
   stage: press `E` to take one.
 - **Live presence**: everyone in the fair at the same moment sees each other as glowing figures
   with a first name. Visitors can wave (`E` when facing someone) and send reactions (`1` to `5`).
-  Authors who open their private link glow gold, and their booth hologram says *Here now*.
+  Authors who open their private link glow gold, and their booth portrait says *Here now*.
 - **Your book at the fair**: a gold *Make your book* button is always in reach. Design a cover
   (title, name, style), set it on the last pedestal, then take home a postcard of it.
 - **The programme and reminders**: once the talk times are set, the event panel lists every talk
@@ -49,7 +51,7 @@ event and discover how to speak their own book (free discovery call).
 
 | Desktop | Phone / tablet |
 | --- | --- |
-| `W` `A` `S` `D` or arrow keys to walk, `Shift` to run | Thumb joystick (bottom left) |
+| `W` `S` (or ↑ ↓) to walk, `A` `D` (or ← →) to turn, `Shift` to run | Thumb joystick (bottom left) |
 | Drag to look around | Drag anywhere to look around |
 | `E` to interact with what you're facing (books, authors, seats, people) | The `E` button (bottom right) |
 | Click any book to open it, click an open book to turn its pages | Tap any book to open it |
@@ -61,7 +63,7 @@ thumb joystick and the `E` button when something can be opened. Everything else 
 book, the live event, between the talks, the guide, the map, the passport, the discovery call) is
 in the `⋯` menu, which also shows who is speaking now or next. A card appears only when the
 visitor asks for one (`E` at the Oracle, the stage or the temple, or the Oracle from the menu),
-with a close button. On the day of the event the live talks open small in the corner.
+with a close button. *Register free* sits at the top of the `⋯` menu.
 
 Browsers without WebGL get a readable, scrolling version of the same content.
 
@@ -77,8 +79,9 @@ with its AI guide and the messages to authors running on the site's own server.
    `/virtual-book-fair/`. Preview it, then publish it. Any other page can show the fair too:
    choose the template **Virtual Book Fair (full screen)** in the page's settings.
 3. On the same settings screen, whenever they are confirmed:
-   - **The live event:** start date and time, registration and Zoom links, the YouTube live
-     stream, and the programme, one line per talk or break:
+   - **The live event:** start date and time, the registration form (its link, or the embed
+     code from Google Forms: **Send → <>**), the Zoom link, and the programme, one line per talk
+     or break:
 
      ```
      5:00 pm | Chuck Barnard | Raising resilient teens | 20
@@ -130,23 +133,37 @@ python3 -m http.server 8000
 
 ## The live event
 
-On WordPress, set the start time, links, stream and programme in **Settings → Virtual Book Fair**;
+On WordPress, set the start time, the registration form, the Zoom link and the programme in **Settings → Virtual Book Fair**;
 they take precedence over `books.js`. On GitHub Pages, the programme goes in `FAIR_EVENT.schedule`
 (see the example in `books.js`): each talk with its exact time (`at`, with its UTC offset), the
 author's id, a title and optional `minutes`, and breaks as `{ at, break: true, title }`. Everything else about the event lives in `FAIR_EVENT` in
-`assets/js/books.js`: the date, the registration form, the Zoom wording and the short description. The countdown, the top-bar pill,
+`assets/js/books.js`: the date, the registration form, the Zoom link and the short description. The countdown, the top-bar pill,
 the posters, the stage screens, the calendar file and the event panel all read from it.
 
 - **Start time**: when it is confirmed, set `start` with its UTC offset, for example
   `'2026-11-01T17:00:00+00:00'`. The fair then counts down to the minute and shows each visitor
   the time in their own time zone. Until then it counts days.
+- **Registering**: every *Register free* button (top bar, `⋯` menu, event panel, posters, guide)
+  opens the Google Form in a window inside the fair, at any time, also for people who already
+  registered. `register` is the form's link and `registerEmbed` the address from its embed code.
+  To let the form tell people they're already registered, turn on **Limit to 1 response** in the
+  form's settings (Google then asks them to sign in). A link that isn't a Google Form opens in a
+  new tab.
+- **Zoom**: there is no video inside the fair. The talks happen on Zoom, always opened in a new
+  tab (or the Zoom app). A **Join on Zoom** button appears 15 minutes before `start` (on the day,
+  if no start time is set) and stays while the talks are on; each talk in the programme, the
+  author's panel, the break card and the reminders gets its own **Watch on Zoom** button from 10
+  minutes before it until it ends. All of them lead to the same Zoom link (`FAIR_EVENT.zoom`).
+- **Creating a book**: the *Create your book with us* button (top bar, or the `⋯` menu on
+  smaller screens) is for visitors who want to write their own book: it books a free discovery
+  call.
 - **After the event** the posters and screens thank visitors for joining and point them to the
   free discovery call instead of the registration form. Nothing else needs to change.
 
 ## Author links
 
 Each author can have a private link. Whoever opens it appears to everyone in the fair as that
-author, glowing gold, and the author's booth hologram lights up with *Here now*. Visitors get a
+author, glowing gold, and the author's booth portrait lights up with *Here now*. Visitors get a
 notice that the author has arrived, and can walk over and wave.
 
 When an author opens their link, a welcome card greets them with one clear first step: a big
@@ -198,18 +215,21 @@ The guide only speaks from the fair's facts. To let it say who speaks when, fill
 `FAIR_EVENT.schedule` in `books.js`. Author bios, websites, LinkedIn and Life Coach Code
 profiles live in `FAIR_AUTHOR_EXTRAS`, and the description of each booth's piece in `FAIR_STANDS`.
 
-## Watching the talks inside the fair
+## Visual quality and long visits
 
-Zoom meetings can't be shown inside another website, so stream the Zoom to YouTube Live
-(in Zoom: **Settings → In Meeting (Advanced) → Allow livestreaming of meetings**, then
-**More → Live on YouTube** during the meeting). Paste the YouTube link into
-`FAIR_EVENT.stream.url` and the Zoom join link into `FAIR_EVENT.stream.zoom`.
+The fair rests when nobody moves (after 20 seconds it draws at 30 frames a second instead of
+60) and while a window covers it (15 a second), so long visits stay smooth and phones stay
+cool. The `⋯` menu has **Visual quality**:
 
-Visitors then get a **Watch the live talks** button (event panel, `⋯` menu, the guide). The
-stream plays in a window beside them while they keep walking the fair. They can make it
-bigger, go full screen, minimise it, or press **Join on Zoom** to take part. Sitting in a seat by the stage opens it large. Once a start
-time is set in `FAIR_EVENT.start`, the window opens by itself when the event goes live.
-Vimeo links work too.
+| Setting | What it shows |
+| --- | --- |
+| **Auto** (default) | Starts at High on computers, Balanced on phones, and steps down by itself whenever the device can't keep up |
+| **High** | Mirror floor, soft shadows, glow, the sharpest picture |
+| **Balanced** | Glow and smooth edges, no mirror floor or shadows |
+| **Light** | The simplest picture at 30 frames a second, no glow or frosted glass: for older devices and long visits |
+
+The choice is remembered on the device. On phones the glow is softer so book covers stay
+readable, and highlights are capped so nothing flares or flickers.
 
 ## Messages to authors
 
@@ -259,7 +279,7 @@ event on `window`. To record them, add Plausible or Google Analytics to `index.h
   `status: 'coming-soon'` and `amazon: null`.
 - **Adding a book:** run `python3 tools/make_covers.py path/to/cover.jpg my-book-slug` (needs
   Pillow), then add an entry with the same `slug` to `books.js`. New books automatically get a
-  booth, a poster, an author hologram, a passport stamp, a map entry and a gentle default piece
+  booth, a poster, an author portrait, a passport stamp, a map entry and a gentle default piece
   beside their stand. The hall grows longer to fit them. To give a book its own themed piece,
   add a builder with its slug in `assets/js/props.js`.
 - **Optional extras, shown only when you add them:**
@@ -270,7 +290,7 @@ event on `window`. To record them, add Plausible or Google Analytics to `index.h
 - **Author photos:** run `python3 tools/make_author_photo.py path/to/photo.jpg author-id` (add
   `--cy 0.35 --zoom 1.3` to frame the face), then set
   `photo: 'assets/img/authors/author-id.webp'` for that author in `FAIR_AUTHOR_EXTRAS`. The photo
-  appears in the gold ring above their hologram, in their panel, at their booth and in the event
+  appears in the gold ring at their booth (under their name), in their panel and in the event
   lineup. Until then, their initials stand in.
 - **Discovery call / Speak Your Book / Solutions links:** `FAIR_LINKS` in `books.js` and the
   links in `index.html`.
@@ -284,7 +304,7 @@ index.html               page, cards, booth panel, event, authors, people, passp
 assets/css/style.css     all styling (desktop, phone, no-WebGL fallback)
 assets/js/books.js       the content: books, event, authors, live presence settings
 assets/js/app.js         UI: cards, panels, passport, Oracle, tour, photo mode, music
-assets/js/world.js       the 3D fair: crest, hall, booths, holograms, stage, seats, people
+assets/js/world.js       the 3D fair: crest, hall, booths, portraits, stage, seats, people
 assets/js/props.js       the themed piece beside each booth
 assets/js/sky.js         space: nebula, stars, planet, moon, shooting stars
 assets/js/textures.js    posters, signs, crest, pages and name tags drawn on canvas

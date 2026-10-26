@@ -44,6 +44,14 @@ function lcc_vbf_sanitize($in) {
 		return esc_url_raw($v);
 	};
 
+	// the registration form: its link, or the embed code from Google Forms
+	$form = $from_form
+		? lcc_vbf_form_urls(isset($in['register']) ? wp_unslash($in['register']) : '')
+		: array('link' => $old['register'], 'embed' => $old['register_embed']);
+	if (isset($in['register']) && trim(wp_unslash($in['register'])) !== '' && !$form['link']) {
+		add_settings_error(LCC_VBF_OPTION, 'lcc_vbf_register', 'The registration form should be a web address or the embed code from Google Forms, so it was left empty.');
+	}
+
 	$start = $str('start');
 	if ($start !== '' && !date_create_immutable_from_format('Y-m-d\TH:i', $start, wp_timezone())) {
 		add_settings_error(LCC_VBF_OPTION, 'lcc_vbf_start', 'The start time could not be read, so it was left empty.');
@@ -92,9 +100,9 @@ function lcc_vbf_sanitize($in) {
 	return array(
 		'page_id'        => absint($str('page_id')),
 		'start'          => $start,
-		'register'       => $url('register', 'The registration link'),
+		'register'       => $form['link'],
+		'register_embed' => $form['embed'],
 		'zoom'           => $url('zoom', 'The Zoom link'),
-		'stream'         => $url('stream', 'The live stream link'),
 		'schedule'       => $schedule,
 		'live'           => empty($in['live']) ? 0 : 1,
 		'ga'             => $ga,
@@ -237,19 +245,15 @@ function lcc_vbf_settings_page() {
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="lcc-vbf-register">Registration link</label></th>
-						<td><input id="lcc-vbf-register" type="url" class="large-text" name="<?php echo $name('register'); ?>" value="<?php echo esc_attr($o['register']); ?>" placeholder="<?php echo esc_attr($ev['register']); ?>"></td>
+						<th scope="row"><label for="lcc-vbf-register">Registration form</label></th>
+						<td>
+							<input id="lcc-vbf-register" type="text" class="large-text" name="<?php echo $name('register'); ?>" value="<?php echo esc_attr($o['register']); ?>" placeholder="<?php echo esc_attr($ev['register']); ?>">
+							<p class="description">The link to the form, or the embed code from Google Forms (Send &gt; &lt;&gt;). Every <em>Register free</em> button opens a Google Form in a window inside the fair; any other link opens in a new tab. <?php echo $o['register'] ? ($o['register_embed'] ? 'This form opens inside the fair.' : 'This form opens in a new tab.') : ''; ?> To let the form tell people they have already registered, turn on <em>Limit to 1 response</em> in the form's settings (it asks them to sign in with Google).</p>
+						</td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="lcc-vbf-zoom">Zoom link</label></th>
-						<td><input id="lcc-vbf-zoom" type="url" class="large-text" name="<?php echo $name('zoom'); ?>" value="<?php echo esc_attr($o['zoom']); ?>" placeholder="<?php echo esc_attr($ev['zoom']); ?>"><p class="description">The <em>Join on Zoom</em> buttons. On the day of the event it becomes the main button.</p></td>
-					</tr>
-					<tr>
-						<th scope="row"><label for="lcc-vbf-stream">Live stream (YouTube or Vimeo)</label></th>
-						<td>
-							<input id="lcc-vbf-stream" type="url" class="large-text" name="<?php echo $name('stream'); ?>" value="<?php echo esc_attr($o['stream']); ?>" placeholder="https://www.youtube.com/watch?v=...">
-							<p class="description">Visitors watch the talks in a window while they walk the fair. Zoom can't be shown inside a website, so stream the Zoom to YouTube Live (Zoom: Settings &gt; In Meeting (Advanced) &gt; Allow livestreaming, then More &gt; Live on YouTube) and paste the YouTube link here.</p>
-						</td>
+						<td><input id="lcc-vbf-zoom" type="url" class="large-text" name="<?php echo $name('zoom'); ?>" value="<?php echo esc_attr($o['zoom']); ?>" placeholder="<?php echo esc_attr($ev['zoom']); ?>"><p class="description">The talks happen here, always opened in a new tab (or the Zoom app). A <em>Join on Zoom</em> button appears 15 minutes before the start time (on the day, if no time is set) and stays while the talks are on; each talk gets its own <em>Watch on Zoom</em> button from 10 minutes before it until it ends.</p></td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="lcc-vbf-schedule">Who speaks when</label></th>

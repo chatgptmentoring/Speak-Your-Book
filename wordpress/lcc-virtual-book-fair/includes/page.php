@@ -135,8 +135,8 @@ function lcc_vbf_config_script() {
 			'start'    => $start,
 			'date'     => $start ? substr($o['start'], 0, 10) : '',
 			'register' => $o['register'] ? esc_url_raw($o['register']) : '',
+			'embed'    => $o['register'] && $o['register_embed'] ? esc_url_raw($o['register_embed']) : '',
 			'zoom'     => $o['zoom'] ? esc_url_raw($o['zoom']) : '',
-			'stream'   => $o['stream'] ? esc_url_raw($o['stream']) : '',
 			'schedule' => lcc_vbf_parse_schedule($o['schedule']),
 		),
 		'guide'    => lcc_vbf_openai_key() ? rest_url('lcc-fair/v1/guide') : '',
@@ -152,10 +152,8 @@ function lcc_vbf_config_script() {
   (function (o) {
     var e = window.FAIR_EVENT || {};
     if (o.event.start) { e.start = o.event.start; e.date = o.event.date; }
-    if (o.event.register) e.register = o.event.register;
-    e.stream = e.stream || {};
-    if (o.event.zoom) e.stream.zoom = o.event.zoom;
-    if (o.event.stream) e.stream.url = o.event.stream;
+    if (o.event.register) { e.register = o.event.register; e.registerEmbed = o.event.embed; }
+    if (o.event.zoom) e.zoom = o.event.zoom;
     if (o.event.schedule.length) e.schedule = o.event.schedule;
     window.FAIR_GUIDE = window.FAIR_GUIDE || {};
     window.FAIR_GUIDE.endpoint = o.guide;

@@ -504,12 +504,13 @@ window.FAIR_EVENT = {
   start: '',
   where: 'Live on Zoom',
   price: 'Free',
-  register: 'https://forms.gle/DCKC79M3vk3nCYMb8',
-  // The live talks inside the fair. Zoom meetings can't be shown inside another website, so
-  // stream the Zoom to YouTube Live (Zoom: Settings > In Meeting (Advanced) > Allow livestreaming)
-  // and paste the YouTube link here. Vimeo links work too. Visitors then watch in a window
-  // beside them as they walk, or full screen. zoom: the join link, for anyone who wants to take part.
-  stream: { url: '', zoom: 'https://us06web.zoom.us/j/83736821137' },
+  // the registration form: register is its link, registerEmbed the address from Google Forms'
+  // Send > <> embed code, so it opens in a window inside the fair
+  register: 'https://forms.gle/5ZBD2bLsYYTeYtoo9',
+  registerEmbed: 'https://docs.google.com/forms/d/e/1FAIpQLSdCwn0gwOIX2-ViHwA5tAygGIISv1m9jYFFm5BCung5iRsqGQ/viewform?embedded=true',
+  // The talks happen on Zoom, opened in a new tab: a Join on Zoom button appears a quarter of an
+  // hour before the start, and each talk gets its own Watch on Zoom button while it is on
+  zoom: 'https://us06web.zoom.us/j/83736821137',
   // Who speaks when, once it is decided (on WordPress: Settings > Virtual Book Fair). at: the exact
   // time with its UTC offset; visitors see it in their own time zone and can set reminders.
   // minutes is optional: without it a talk lasts until the next entry. Breaks: break: true.

@@ -14,6 +14,8 @@ const QUIZ = window.FAIR_QUIZ || [];
 const STORES = window.FAIR_STORES || [];
 const LINKS = window.FAIR_LINKS || {};
 const EVENT = window.FAIR_EVENT || null;
+// the Zoom link once lived at stream.zoom: older settings still work
+if (EVENT && !EVENT.zoom && EVENT.stream && EVENT.stream.zoom) EVENT.zoom = EVENT.stream.zoom;
 const CONTACT = window.FAIR_CONTACT || {};
 const AUTHORS = window.FAIR_AUTHORS || [];
 const authorById = Object.fromEntries(AUTHORS.map((a) => [a.id, a]));
@@ -66,7 +68,9 @@ function track(name, props = {}) {
 /* Panels that pause walking while they are open */
 const Overlays = new Set();
 function overlayChanged() {
-  if (world) world.setInputEnabled(!Overlays.size && !Detail.isOpen());
+  if (!world) return;
+  world.setInputEnabled(!Overlays.size && !Detail.isOpen());
+  world.setCovered(Overlays.size > 0);
 }
 function makeSheet(id, { onOpen, onClose } = {}) {
   const el = document.getElementById(id);
@@ -147,20 +151,33 @@ const EventInfo = (() => {
       return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Life Coach Code//Virtual Book Fair//EN', 'BEGIN:VEVENT',
         `UID:${EVENT.date}-speak-your-book@lifecoachcode.com`, `DTSTAMP:${stamp}`, ...when,
         `SUMMARY:${escI(`${EVENT.name} (${EVENT.where})`)}`,
-        ...(EVENT.stream && EVENT.stream.zoom ? [`LOCATION:${escI(EVENT.stream.zoom)}`] : []),
-        `DESCRIPTION:${escI(`${EVENT.about}\n${EVENT.stream && EVENT.stream.zoom ? `Join on Zoom: ${EVENT.stream.zoom}\n` : ''}Register free: ${EVENT.register}\nThe Virtual Book Fair: ${location.origin + location.pathname}`)}`,
+        ...(EVENT.zoom ? [`LOCATION:${escI(EVENT.zoom)}`] : []),
+        `DESCRIPTION:${escI(`${EVENT.about}\n${EVENT.zoom ? `Join on Zoom: ${EVENT.zoom}\n` : ''}Register free: ${EVENT.register}\nThe Virtual Book Fair: ${location.origin + location.pathname}`)}`,
         `URL:${EVENT.register}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
     }
   };
 })();
-const ZOOM = EVENT && EVENT.stream && EVENT.stream.zoom;
+const ZOOM = (EVENT && EVENT.zoom) || '';
 const ZOOM_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="3" fill="currentColor"/><path d="M16.5 10.5l5-3v9l-5-3z" fill="currentColor"/></svg>';
 const isEventDay = () => !!EventInfo && ['today', 'soon', 'live'].includes(EventInfo.status().phase);
+/* The talks happen on Zoom, one room for the whole event, always opened in a new tab.
+   Its door opens a quarter of an hour before the start and stays open while the talks are on;
+   each talk has its own Watch on Zoom button from ten minutes before it until it ends. */
+const Zoom = {
+  isOpen(now = Date.now()) {
+    if (!ZOOM || !EventInfo) return false;
+    const ph = EventInfo.status().phase;
+    if (ph === 'live' || ph === 'today') return true;
+    return ph === 'soon' && !!EVENT.start && new Date(EVENT.start) - now <= 15 * 6e4;
+  },
+  talkOn: (s, now = Date.now()) => !!ZOOM && !!s && !!s.start && now >= +s.start - 10 * 6e4 && now < +s.end,
+  link: (cls, label = 'Join on Zoom') => `<a class="${cls} btn--zoom" data-zoom-link href="${esc(ZOOM)}" target="_blank" rel="noopener">${ZOOM_ICON} ${esc(label)}</a>`,
+  go(from) { window.open(ZOOM, '_blank', 'noopener'); track('zoom_join', { from }); }
+};
 function eventCta() {
-  if (!EventInfo || !EventInfo.upcoming()) return `<a class="btn btn--gold" href="${LINKS.discovery}" target="_blank" rel="noopener">Speak your own book</a>`;
-  const join = ZOOM ? `<a class="btn ${isEventDay() ? 'btn--gold' : 'btn--ghost'} btn--zoom" data-zoom href="${esc(ZOOM)}" target="_blank" rel="noopener">${ZOOM_ICON} Join on Zoom</a>` : '';
-  const reg = `<a class="btn ${isEventDay() ? 'btn--ghost' : 'btn--gold'}" data-event-register href="${esc(EVENT.register)}" target="_blank" rel="noopener">Register free</a>`;
-  return isEventDay() ? join + reg : reg + join;
+  if (!EventInfo || !EventInfo.upcoming()) return `<a class="btn btn--gold" href="${LINKS.discovery}" target="_blank" rel="noopener">Create your book with us</a>`;
+  const reg = `<a class="btn ${Zoom.isOpen() ? 'btn--ghost' : 'btn--gold'}" data-event-register href="${esc(EVENT.register)}" target="_blank" rel="noopener">Register free</a>`;
+  return Zoom.isOpen() ? Zoom.link('btn btn--gold') + reg : reg;
 }
 const eventLine = () => (EventInfo && EventInfo.upcoming() ? `Speaking live at ${EVENT.name} · ${EventInfo.dateLong()}, free on Zoom` : `Spoke live at ${EVENT ? EVENT.name : 'the fair'}`);
 
@@ -946,8 +963,11 @@ function interact(info) {
     case 'seat':
       if (world) world.sit(info.index >= 0 ? info.index : 0);
       Sound.play('step');
-      if (LiveStream.isOn()) setTimeout(() => LiveStream.open('theatre'), 1200);
-      setTimeout(() => toast(EventInfo && EventInfo.upcoming() ? `<i>✦</i> Front row saved for you. On ${esc(EventInfo.dateLong())} the authors speak here, live.` : '<i>✦</i> Front row. Every book here began with a voice.', 4200), 900);
+      setTimeout(() => {
+        const n = EventUI.now();
+        if (n && n.kind === 'talk' && ZOOM) toast(`<i>✦</i> Front row. <b>${esc(n.a.displayName)}</b> is speaking now, live on Zoom.`, 9000, { label: 'Watch on Zoom', fn: () => Zoom.go('seat') });
+        else toast(EventInfo && EventInfo.upcoming() ? `<i>✦</i> Front row saved for you. On ${esc(EventInfo.dateLong())} the authors speak live on Zoom.` : '<i>✦</i> Front row. Every book here began with a voice.', 4200);
+      }, 900);
       break;
     case 'peer':
       People.wave(info);
@@ -1139,9 +1159,9 @@ const EventUI = (() => {
     const n = now();
     let countdown = after
       ? { eyebrow: EVENT.name.toUpperCase(), big: 'THANK YOU', label: 'FOR JOINING US LIVE', line: 'Your book could be next', cta: 'FREE DISCOVERY CALL · PRESS E' }
-      : { eyebrow: `${EVENT.name} · ${EVENT.where}`.toUpperCase(), big: st.big, label: st.label, line: `${EventInfo.dateLong()} · ${EVENT.price.toLowerCase()}`, cta: isEventDay() && ZOOM ? 'JOIN ON ZOOM · PRESS E' : 'REGISTER FREE · PRESS E' };
+      : { eyebrow: `${EVENT.name} · ${EVENT.where}`.toUpperCase(), big: st.big, label: st.label, line: `${EventInfo.dateLong()} · ${EVENT.price.toLowerCase()}`, cta: Zoom.isOpen() ? 'JOIN ON ZOOM · PRESS E' : 'REGISTER FREE · PRESS E' };
     if (n && n.kind === 'talk') {
-      countdown = { eyebrow: `NOW SPEAKING · ${EVENT.where}`.toUpperCase(), big: 'LIVE', label: n.a.displayName.toUpperCase(), line: n.s.title || EVENT.name, cta: LiveStream.available() ? 'WATCH HERE OR JOIN ON ZOOM · PRESS E' : 'JOIN ON ZOOM · PRESS E' };
+      countdown = { eyebrow: `NOW SPEAKING · ${EVENT.where}`.toUpperCase(), big: 'LIVE', label: n.a.displayName.toUpperCase(), line: n.s.title || EVENT.name, cta: ZOOM ? 'WATCH ON ZOOM · PRESS E' : 'PRESS E FOR THE PROGRAMME' };
     } else if (n && n.kind === 'break') {
       const m = Program.minsTo(n.s);
       countdown = { eyebrow: 'BETWEEN THE TALKS', big: String(m), label: m === 1 ? 'MINUTE TO THE NEXT TALK' : 'MINUTES TO THE NEXT TALK', line: `Next: ${n.a.displayName} · ${n.s.time}`, cta: 'BREATHE · LANTERNS · THE ORACLE' };
@@ -1186,16 +1206,30 @@ const EventUI = (() => {
       el.innerHTML = after ? '' : `<b>${esc(st.big === 'TODAY' ? 'Today' : st.big)}</b><span>${esc(st.big === 'TODAY' ? 'live on Zoom' : st.label.toLowerCase())}</span>`;
     });
     $$('[data-event-register]').forEach((a) => {
+      if (a.classList.contains('hud__reg')) { a.hidden = after; return; }
       a.href = after ? LINKS.discovery : EVENT.register;
       if (after) a.textContent = 'Book a free discovery call';
     });
-    // the Zoom room: everyone joins from here (a new window, or the Zoom app on phones)
+    $$('.more__reg').forEach((b) => { b.hidden = after; });
+    // the Zoom room: everyone joins from here (a new tab, or the Zoom app on phones), once its door opens
     const cta = $('[data-event-cta]');
-    if (cta && ZOOM && !after && !$('[data-zoom]', cta)) cta.insertAdjacentHTML('afterbegin', `<a class="btn btn--ghost btn--lg btn--zoom" data-zoom href="${esc(ZOOM)}" target="_blank" rel="noopener">${ZOOM_ICON} Join on Zoom</a>`);
-    $$('[data-zoom]').forEach((z) => { z.hidden = after || !ZOOM; if (ZOOM) z.href = ZOOM; z.classList.toggle('btn--gold', isEventDay()); z.classList.toggle('btn--ghost', !isEventDay()); });
-    if (isEventDay()) setText('pill-sub', 'join on Zoom now');
+    if (cta && ZOOM && !$('[data-zoom]', cta)) cta.insertAdjacentHTML('afterbegin', `<a class="btn btn--gold btn--lg btn--zoom" data-zoom href="${esc(ZOOM)}" target="_blank" rel="noopener" hidden>${ZOOM_ICON} Join on Zoom</a>`);
+    const open = Zoom.isOpen();
+    $$('[data-zoom]').forEach((z) => {
+      z.hidden = !open;
+      if (ZOOM) z.href = ZOOM;
+      if (!$('svg', z)) z.insertAdjacentHTML('afterbegin', ZOOM_ICON + ' ');
+      z.classList.add('btn--gold');
+      z.classList.remove('btn--ghost');
+      // while the room is open, Zoom is the main button and Register free steps back beside it
+      const reg = z.parentElement && $('[data-event-register]', z.parentElement);
+      if (reg && !after) { reg.classList.toggle('btn--gold', !open); reg.classList.toggle('btn--ghost', open); }
+    });
+    $$('[data-zoom-menu]').forEach((z) => { z.hidden = !open; if (ZOOM) z.href = ZOOM; });
+    document.documentElement.classList.toggle('is-zoom-open', open);
+    if (open) setText('pill-sub', 'join on Zoom now');
     const n = now();
-    if (n && n.kind === 'talk') { setText('pill', `Now: ${n.a.displayName}`); setText('pill-sub', 'speaking live · join on Zoom'); setText('menu', `Now speaking: ${n.a.displayName}`); }
+    if (n && n.kind === 'talk') { setText('pill', `Now: ${n.a.displayName}`); setText('pill-sub', 'speaking live · join on Zoom'); setText('menu', `Now speaking: ${n.a.displayName}`); setText('menu-zoom', `Now: ${n.a.displayName}, in a new tab`); }
     if (n && n.kind === 'break') { setText('pill', `Next: ${firstName(n.a)} · ${n.s.time}`); setText('pill-sub', `in ${Program.minsTo(n.s)} min · a break to enjoy the fair`); setText('menu', `Next: ${n.a.displayName} · in ${Program.minsTo(n.s)} min`); }
     Between.check(n);
     $('#event-pill').hidden = after;
@@ -1220,7 +1254,7 @@ const EventUI = (() => {
       const a = authorById[s.author];
       return `<li class="pg__item${on ? ' is-now' : ''}"><time>${esc(s.time)}</time>${a ? avatar(a, true) : ''}
         <span><b>${esc(a ? a.displayName : s.author)}</b>${s.title ? `<small>${esc(s.title)}</small>` : ''}</span>
-        ${on ? '<em>● Speaking now</em>' : Reminders.button(s)}</li>`;
+        ${Zoom.talkOn(s) ? `${on ? '<em>● Speaking now</em>' : ''}${Zoom.link('chip chip--zoom', 'Watch on Zoom')}` : on ? '<em>● Speaking now</em>' : Reminders.button(s)}</li>`;
     }).join('');
   }
   function render() {
@@ -1329,16 +1363,14 @@ const Reminders = (() => {
   function alert(s, mins) {
     const who = nameOf(s);
     const text = mins > 0 ? `${who} speaks in ${mins} minute${mins === 1 ? '' : 's'}` : `${who} is speaking now`;
-    const go = LiveStream.available() ? { label: 'Watch here', fn: () => LiveStream.open() }
-      : ZOOM ? { label: 'Join on Zoom', fn: () => { window.open(ZOOM, '_blank', 'noopener'); track('zoom_join', { from: 'reminder' }); } }
-        : { label: 'The programme', fn: () => EventUI.open() };
+    const go = ZOOM ? { label: 'Watch on Zoom', fn: () => Zoom.go('reminder') } : { label: 'The programme', fn: () => EventUI.open() };
     toast(`<i>🔔</i> <b>${esc(text)}</b>${s.title ? ` · <em>${esc(s.title)}</em>` : ''}`, 20000, go);
     ring();
     if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
     if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
       try {
         const n = new Notification(text, { body: `${s.title ? s.title + ' · ' : ''}${EVENT.name}, live on Zoom`, icon: asset('assets/img/brand/logo-512.png'), tag: s.key });
-        n.onclick = () => { window.focus(); n.close(); };
+        n.onclick = () => { window.focus(); n.close(); if (ZOOM) Zoom.go('notification'); };
       } catch (e) { /* notifications are a bonus */ }
     }
     track('reminder_alert', { author: s.author, mins });
@@ -1421,7 +1453,7 @@ const AuthorPanel = (() => {
     const now = new Date();
     return talks.map((s) => {
       const when = s.end <= now ? 'Spoke live at' : s.start <= now ? 'Speaking live now, since' : 'Speaks live at';
-      return `<p class="au__talk"><span>${when} <b>${esc(s.time)}</b>${s.title ? ` · <em>${esc(s.title)}</em>` : ''}</span>${Reminders.button(s)}</p>`;
+      return `<p class="au__talk"><span>${when} <b>${esc(s.time)}</b>${s.title ? ` · <em>${esc(s.title)}</em>` : ''}</span>${Zoom.talkOn(s) ? Zoom.link('chip chip--zoom', 'Watch on Zoom') : Reminders.button(s)}</p>`;
     }).join('');
   }
   function bioHtml(a) {
@@ -2062,6 +2094,7 @@ function doAction(name) {
   switch (name) {
     case 'tour': Tour.isActive() ? Tour.stop() : Tour.start(); break;
     case 'event': EventUI.open(); break;
+    case 'register': Register.open('menu'); break;
     case 'people': People.open(); break;
     case 'creator': Creator.open(); break;
     case 'postcard': Creator.postcard(); break;
@@ -2069,7 +2102,6 @@ function doAction(name) {
     case 'map': MapPanel.open(); break;
     case 'sound': Sound.toggle(); break;
     case 'guide': if (Guide) Guide.open(); break;
-    case 'watch': LiveStream.open(); break;
     case 'passport': Passport.open(); break;
     case 'mybooth': AuthorHi.go(); break;
     case 'between': Between.open(); break;
@@ -2086,61 +2118,37 @@ function doAction(name) {
 }
 
 /* =========================================================================
-   The live talks: a window beside you as you walk, bigger, or full screen
+   Registration: the Google Form opens in a window inside the fair, any time, for anyone.
+   Without an embed address (FAIR_EVENT.registerEmbed) the form opens in a new tab.
    ========================================================================= */
-const LiveStream = (() => {
-  const S = (EVENT && EVENT.stream) || {};
-  const el = $('#live'), frame = $('#live-frame');
-  // YouTube and Vimeo links become their embeddable players; anything else is used as given
-  function toEmbed(u) {
-    if (!u || !/^https:\/\//.test(u)) return '';
-    let m = u.match(/(?:youtube\.com\/(?:watch\?v=|live\/|embed\/)|youtu\.be\/)([\w-]{6,})/);
-    if (m) return `https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&playsinline=1&rel=0`;
-    m = u.match(/vimeo\.com\/event\/(\d+)/);
-    if (m) return `https://vimeo.com/event/${m[1]}/embed`;
-    m = u.match(/vimeo\.com\/(\d+)/);
-    if (m) return `https://player.vimeo.com/video/${m[1]}?autoplay=1`;
-    return u;
-  }
-  const src = toEmbed(S.url);
-  const phase = () => (EventInfo ? EventInfo.status().phase : 'after');
-  function setMode(mode) {
-    el.dataset.mode = mode;
-    document.documentElement.classList.toggle('is-watching', mode !== 'min');
-    document.documentElement.classList.toggle('is-theatre', mode === 'theatre');
-  }
-  function open(mode = 'dock') {
-    if (!src) { EventUI.open(); return; }
-    if (!frame.getAttribute('src')) frame.src = src;
-    el.hidden = false;
-    setMode(mode);
-    track('stream_open', { mode });
-  }
-  function close() {
-    el.hidden = true;
-    frame.removeAttribute('src');
-    document.documentElement.classList.remove('is-watching', 'is-theatre');
+const Register = (() => {
+  const EMBED = EVENT && /^https:\/\/docs\.google\.com\/forms\//.test(EVENT.registerEmbed || '') ? EVENT.registerEmbed : '';
+  const frame = $('#rg-frame');
+  const sheet = makeSheet('register-panel', {
+    onOpen: () => {
+      if (frame.getAttribute('src')) return;
+      frame.addEventListener('load', () => sheet.el.classList.add('is-loaded'), { once: true });
+      frame.src = EMBED;
+    }
+  });
+  const usable = () => !!EMBED && !!EventInfo && EventInfo.upcoming();
+  function open(from = 'link') {
+    if (!EVENT) return;
+    if (!usable()) { window.open(EventInfo && !EventInfo.upcoming() ? LINKS.discovery : EVENT.register, '_blank', 'noopener'); return; }
+    sheet.open();
+    track('register_open', { from });
   }
   function init() {
-    if (!src) return;
-    $$('[data-do="watch"]').forEach((b) => { b.hidden = false; });
-    if (S.zoom) { const z = $('#live-zoom'); z.href = S.zoom; z.hidden = false; }
-    el.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-live]');
-      if (!b) { if (el.dataset.mode === 'min' && e.target.closest('.live__bar')) setMode('dock'); return; }
-      const a = b.getAttribute('data-live');
-      if (a === 'close') close();
-      if (a === 'min') setMode(el.dataset.mode === 'min' ? 'dock' : 'min');
-      if (a === 'theatre') setMode(el.dataset.mode === 'theatre' ? 'dock' : 'theatre');
-      if (a === 'full') { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) f.call(el); else setMode('theatre'); }
+    if (!EVENT) return;
+    $('#rg-open').href = EVENT.register;
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-event-register]');
+      if (!a || !usable() || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+      e.preventDefault();
+      open(a.classList.contains('hud__reg') ? 'hud' : 'link');
     });
-    // on the day, the talks open by themselves in the corner (once per visit)
-    if (phase() === 'live' && !sessionStorage.getItem('lcc-fair-stream')) {
-      try { sessionStorage.setItem('lcc-fair-stream', '1'); } catch (e) { /* private mode */ }
-      setTimeout(() => open(cleanView.matches ? 'min' : 'dock'), 4000);
-    }
   }
-  return { init, open, close, available: () => !!src, isOn: () => !!src && ['live', 'today', 'soon'].includes(phase()) };
+  return { init, open };
 })();
 
 /* =========================================================================
@@ -2159,8 +2167,8 @@ const Between = (() => {
     next.hidden = !up;
     if (!up) return;
     const { s, a } = up;
-    const go = talk
-      ? `${LiveStream.available() ? '<button class="btn btn--gold btn--sm" type="button" data-do="watch">Watch here</button>' : ''}${ZOOM ? `<a class="btn btn--ghost btn--sm btn--zoom" href="${esc(ZOOM)}" target="_blank" rel="noopener">${ZOOM_ICON} Join on Zoom</a>` : ''}`
+    const go = Zoom.talkOn(s)
+      ? `${Zoom.link('btn btn--gold btn--sm', 'Watch on Zoom')}<button class="btn btn--ghost btn--sm" type="button" data-place="book-${a.books[0]}">Visit the booth</button>`
       : `${Reminders.button(s, 'btn btn--ghost btn--sm')}<button class="btn btn--ghost btn--sm" type="button" data-place="book-${a.books[0]}">Visit the booth</button>`;
     const when = talk ? 'Now speaking' : `Next up · ${s.time}${s.start > new Date() ? ` · in ${Program.minsTo(s)} min` : ''}`;
     next.innerHTML = `<div class="between__who">${avatar(a, true)}<span><small>${esc(when)}</small><b>${esc(a.displayName)}</b>${s.title ? `<em>${esc(s.title)}</em>` : ''}</span></div><div class="card__actions">${go}</div>`;
@@ -2314,6 +2322,36 @@ const Lantern = (() => {
 })();
 
 let Guide = null;
+/* Visual quality: Auto steps down by itself when the device can't keep up; the visitor can choose */
+const Quality = (() => {
+  const KEY = 'lcc-fair-quality';
+  const NAMES = { high: 'High', balanced: 'Balanced', light: 'Light' };
+  const NOTES = {
+    high: 'Mirror floor, soft shadows, glow',
+    balanced: 'Glow, no mirror floor: smoother',
+    light: 'Simplest and coolest: for long visits'
+  };
+  const mode = () => { const m = store.get(KEY, 'auto'); return NAMES[m] ? m : 'auto'; };
+  function show({ mode: m, level }) {
+    $$('[data-quality]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.quality === m ? 'true' : 'false'));
+    const note = $('#q-note');
+    if (note) note.textContent = m === 'auto' ? `Auto · now ${NAMES[level]}` : NOTES[m];
+    document.documentElement.classList.toggle('q-light', level === 'light');
+  }
+  function set(m) {
+    store.set(KEY, m);
+    if (world) world.setQuality(m);
+    track('quality', { mode: m });
+  }
+  function init() {
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-quality]');
+      if (b) set(b.dataset.quality);
+    });
+  }
+  return { init, mode, show };
+})();
+
 const More = (() => {
   const btn = $('#more-btn'), menu = $('#more');
   function set(open) {
@@ -2447,7 +2485,8 @@ async function boot() {
   AuthorHi.init();
   Tour.init();
   More.init();
-  LiveStream.init();
+  Quality.init();
+  Register.init();
   Reminders.init();
   Between.init();
   Breathe.init();
@@ -2468,8 +2507,9 @@ async function boot() {
         event: () => EventUI.open(),
         creator: () => Creator.open(),
         tour: () => Tour.start(),
-        watch: () => LiveStream.open(),
-        canWatch: () => LiveStream.available(),
+        watch: () => Zoom.go('guide'),
+        canWatch: () => Zoom.isOpen(),
+        register: () => Register.open('guide'),
         remind: (id) => Reminders.setFor(id),
         canRemind: (id) => Reminders.canFor(id),
         breathe: () => Breathe.open(),
@@ -2521,7 +2561,9 @@ async function boot() {
       onSelect: (info) => interact(info),
       onZone: (id) => { if (!Detail.isOpen()) Context.show(id); if (Guide) Guide.zoneChanged(id); },
       onNear: (info) => Prompt.set(info),
-      onMoved: () => Hints.moved()
+      onMoved: () => Hints.moved(),
+      quality: Quality.mode(),
+      onQuality: Quality.show
     });
     setLoad(1);
     if (new URLSearchParams(location.search).has('debug')) window.__fair = world;

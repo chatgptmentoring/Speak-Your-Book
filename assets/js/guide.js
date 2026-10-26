@@ -116,20 +116,19 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
     } else if (sched.length) {
       reply += '\n\n**The programme** (in your time zone):\n' + sched.map((s) => `- **${s.time}** · ${s.break ? `*${s.title || 'Break'}*` : `${authorById[s.author] ? authorById[s.author].displayName : s.author}${s.title ? `: *${s.title}*` : ''}`}`).join('\n');
     }
-    const zoom = EVENT.stream && EVENT.stream.zoom;
-    const actions = [{ type: 'link', label: 'Register free', url: EVENT.register }, ...(zoom ? [{ type: 'link', label: 'Join on Zoom', url: zoom }] : []), { type: 'event' }];
+    const actions = [{ type: 'register' }, { type: 'event' }];
     if (remindable(a)) actions.unshift({ type: 'remind', id: a.id });
     if (act.canWatch()) actions.unshift({ type: 'watch' });
     return { reply, actions };
   }
   function speakersAnswer() {
     const lines = AUTHORS.map((a) => `- **${a.displayName}** · ${a.books.map((s) => `*${bySlug[s].title}*`).join(', ')}`);
-    return { reply: `Every author in the fair speaks live at **${EVENT ? EVENT.name : 'the event'}**${upcoming() ? ` on ${eventInfo.dateLong()}` : ''}:\n${lines.join('\n')}`, actions: [{ type: 'event' }, ...(upcoming() ? [{ type: 'link', label: 'Register free', url: EVENT.register }] : [])] };
+    return { reply: `Every author in the fair speaks live at **${EVENT ? EVENT.name : 'the event'}**${upcoming() ? ` on ${eventInfo.dateLong()}` : ''}:\n${lines.join('\n')}`, actions: [{ type: 'event' }, ...(upcoming() ? [{ type: 'register' }] : [])] };
   }
   function watchAnswer() {
-    const S = (EVENT && EVENT.stream) || {};
-    if (act.canWatch()) return { reply: `You can watch the talks right here: the live window stays beside you while you walk the fair, or goes full screen.${S.zoom ? ' To take part and ask questions, join on Zoom.' : ''}`, actions: [{ type: 'watch' }, ...(S.zoom ? [{ type: 'link', label: 'Join on Zoom', url: S.zoom }] : [])] };
-    return { reply: `The talks happen live on Zoom${upcoming() ? ` on **${eventInfo.dateLong()}**` : ''}. ${S.zoom ? 'The **Join on Zoom** button opens the call in a new window, or in the Zoom app on your phone.' : 'Register free to get the link.'}`, actions: [...(S.zoom ? [{ type: 'link', label: 'Join on Zoom', url: S.zoom }] : []), { type: 'link', label: 'Register free', url: EVENT ? EVENT.register : LINKS.discovery }] };
+    if (act.canWatch()) return { reply: 'The talks are live on Zoom right now. **Watch on Zoom** opens the call in a new tab (or the Zoom app on your phone), and the fair stays open here for the breaks.', actions: [{ type: 'watch' }, { type: 'event' }] };
+    if (!upcoming()) return { reply: `**${EVENT ? EVENT.name : 'The event'}** has taken place. If you have a book inside you, a free discovery call is where yours begins.`, actions: [{ type: 'link', label: 'Free discovery call', url: LINKS.discovery }] };
+    return { reply: `The talks happen live on Zoom on **${eventInfo.dateLong()}**. When the event starts, a **Join on Zoom** button appears right here in the fair, and every talk gets its own **Watch on Zoom** button. Register free so you don’t miss it.`, actions: [{ type: 'register' }, { type: 'event' }] };
   }
   function sybAnswer() {
     return {
@@ -185,7 +184,7 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
     map: 'The **map** (press **M**) jumps anywhere: every booth, the stage, the Oracle and the temple.',
     tour: 'The **guided tour** (press **T**) walks you through the whole fair with captions, and can read them aloud.',
     photo: '**Photo mode** (press **P**) takes a framed picture of exactly where you stand, ready to share.',
-    walk: 'Walk with **W A S D** (or the joystick on a phone), drag to look around, and press **E** when something glows.'
+    walk: 'Walk with **W** and **S**, turn with **A** and **D** (or the joystick on a phone), drag to look around, and press **E** when something glows.'
   };
 
   function localAnswer(raw) {
@@ -242,10 +241,10 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
   function knowledge() {
     const st = evStatus();
     return JSON.stringify({
-      fair: `The Virtual Book Fair: a walkable 3D book fair floating in space, hosted by Life Coach Code. ${BOOKS.length} booths, each with a book, a hologram of its author and a themed piece. Visitors walk with W A S D or a joystick, press E to interact, M for the map, T for a guided tour, P for a photo. Every booth opened stamps the Fair Passport.`,
+      fair: `The Virtual Book Fair: a walkable 3D book fair floating in space, hosted by Life Coach Code. ${BOOKS.length} booths, each with a book, the author's portrait on a beam of light and a themed piece. Visitors walk with W and S, turn with A and D (or use a joystick on phones), press E to interact, M for the map, T for a guided tour, P for a photo. Every booth opened stamps the Fair Passport.`,
       host: { name: 'Life Coach Code', about: 'A home for coaches and seekers, built on four pillars: Spirit, Mind, Body and Heart. Helps coaches get seen, get heard and get published.', solutions: ['Publishing: Speak Your Book', 'Visibility: features and media', 'Recognition: awards and honours', 'Stages: summits and events'], links: LINKS },
       speakYourBook: ['Book a free discovery call', 'Speak your story in your own voice', 'Watch it become a book', 'Take your place at the fair'],
-      event: EVENT && { name: EVENT.name, date: eventInfo.dateLong(), startTime: eventInfo.time() || 'not announced yet', where: EVENT.where, price: EVENT.price, register: EVENT.register, about: EVENT.about, status: st && st.count, schedule: (EVENT.schedule || []).map((s) => ({ time: s.time, author: s.author, break: !!s.break, title: s.title || '', canRemind: !!(s.start && s.start > new Date()) })), timesAreInTheVisitorsTimeZone: true, streamInTheFair: act.canWatch() },
+      event: EVENT && { name: EVENT.name, date: eventInfo.dateLong(), startTime: eventInfo.time() || 'not announced yet', where: EVENT.where, price: EVENT.price, register: EVENT.register, about: EVENT.about, status: st && st.count, schedule: (EVENT.schedule || []).map((s) => ({ time: s.time, author: s.author, break: !!s.break, title: s.title || '', canRemind: !!(s.start && s.start > new Date()) })), timesAreInTheVisitorsTimeZone: true, zoomOpenNow: act.canWatch() },
       activities: ['A guided breathing minute with the four pillars (action breathe)', 'A wishing lantern: write an intention and let it rise over the fair; others see it rise, the words stay private (action lantern)', 'The Book Oracle: three questions that point to the right book (action quiz)', 'Reminders for a talk, 30, 10 and 5 minutes before (action remind with the author id)'],
       places: [{ id: 'welcome', label: 'Entrance' }, { id: 'hall', label: 'Grand Hall' }, { id: 'oracle', label: 'Book Oracle' }, { id: 'speak', label: 'Speak Your Book stage' }, { id: 'about', label: 'Temple of Life Coach Code' }, { id: 'finale', label: 'Pedestal for your book' }, ...BOOKS.map((b) => ({ id: place(b.slug), label: b.title }))],
       books: BOOKS.map((b) => ({ slug: b.slug, place: place(b.slug), title: b.title, subtitle: b.subtitle, author: b.displayAuthor || b.author, authorId: authorOf[b.slug] && authorOf[b.slug].id, status: b.status || 'published', hook: b.hook, description: b.description.join(' '), inside: b.inside, forWho: b.forWho, steps: b.steps && b.steps.items.map((s) => `${s.name}: ${s.text}`), stand: STANDS[b.slug], amazon: b.amazon && b.amazon.url })),
@@ -266,7 +265,7 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
 
   /* only actions that point at real places, books, authors and the fair's own links */
   const allowedUrls = () => new Set([
-    ...Object.values(LINKS), EVENT && EVENT.register, EVENT && EVENT.stream && EVENT.stream.zoom,
+    ...Object.values(LINKS), EVENT && EVENT.register, EVENT && EVENT.zoom,
     ...BOOKS.filter((b) => b.amazon).map((b) => b.amazon.url),
     ...AUTHORS.flatMap((a) => [a.website, a.linkedin, a.profile, a.interview])
   ].filter(Boolean));
@@ -279,6 +278,7 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
         || (x.type === 'book' && bySlug[x.slug]) || (x.type === 'author' && authorById[x.id])
         || (x.type === 'message' && authorById[x.id] && authorById[x.id].inbox)
         || (x.type === 'link' && urls.has(x.url)) || ['event', 'creator', 'tour', 'breathe', 'lantern', 'quiz'].includes(x.type) || (x.type === 'watch' && act.canWatch())
+        || (x.type === 'register' && upcoming())
         || (x.type === 'remind' && authorById[x.id] && act.canRemind(x.id));
       const key = JSON.stringify(x);
       if (!ok || seen.has(key)) return false;
@@ -296,7 +296,8 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       case 'event': return 'The live event';
       case 'creator': return 'Design my cover';
       case 'tour': return 'Start the guided tour';
-      case 'watch': return '● Watch live';
+      case 'watch': return '● Watch on Zoom';
+      case 'register': return 'Register free';
       case 'remind': return `🔔 Remind me: ${authorById[x.id].displayName}`;
       case 'breathe': return 'Breathe for a minute';
       case 'lantern': return 'Release a lantern';
@@ -316,13 +317,14 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       case 'creator': act.creator(); break;
       case 'tour': act.tour(); setOpen(false); break;
       case 'watch': act.watch(); break;
+      case 'register': act.register(); break;
       case 'remind': act.remind(x.id); break;
       case 'breathe': act.breathe(); setOpen(false); break;
       case 'lantern': act.lantern(); setOpen(false); break;
       case 'quiz': act.quiz(); break;
       default:
     }
-    if (window.matchMedia('(max-width: 760px)').matches && ['goto', 'book', 'author', 'event', 'creator', 'watch', 'message', 'quiz'].includes(x.type)) setOpen(false);
+    if (window.matchMedia('(max-width: 760px)').matches && ['goto', 'book', 'author', 'event', 'creator', 'message', 'quiz', 'register'].includes(x.type)) setOpen(false);
   }
 
   /* ---------- the conversation ---------- */
@@ -336,7 +338,7 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       actions.forEach((x) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = x.type === 'link' || x.type === 'watch' ? 'gact gact--gold' : 'gact';
+        btn.className = ['link', 'watch', 'register'].includes(x.type) ? 'gact gact--gold' : 'gact';
         btn.textContent = actionLabel(x);
         btn.addEventListener('click', () => runAction(x));
         row.appendChild(btn);

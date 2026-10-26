@@ -16,6 +16,13 @@ import * as T from './textures.js';
 import { createProps } from './props.js';
 import { createSky } from './sky.js';
 
+// A highlight brighter than a half-float buffer can hold turns into Inf (or NaN), and bloom then
+// spreads it across the screen as a black frame. Keep every lit surface finite and within range.
+THREE.ShaderChunk.opaque_fragment = THREE.ShaderChunk.opaque_fragment.replace(
+  'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
+  'outgoingLight = ( any( isnan( outgoingLight ) ) || any( isinf( outgoingLight ) ) ) ? vec3( 0.0 ) : min( outgoingLight, vec3( 512.0 ) );\ngl_FragColor = vec4( outgoingLight, diffuseColor.a );'
+);
+
 const V3 = THREE.Vector3;
 const BOOK_W = 0.5;
 const BOOK_D = 0.07;
@@ -53,8 +60,12 @@ void main(){
   p.y = uRise > 0.0 ? mod(p.y + uTime * (0.04 + aSeed * 0.08) * uRise, uHeight) : p.y;
   p.x += sin(uTime * 0.25 + aSeed * 40.0) * 0.25 * uRise;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  gl_PointSize = min(uSize * (0.6 + aSeed * 0.8) * uScale / max(-mv.z, 0.05), 96.0);
-  vA = 0.35 + 0.65 * abs(sin(uTime * (0.6 + aSeed) + aSeed * 50.0));
+  // a point smaller than a pixel blinks in and out as it moves: keep it a pixel and a half wide
+  // and let it fade instead, so far-off sparkles shimmer softly rather than flicker
+  float s = uSize * (0.6 + aSeed * 0.8) * uScale / max(-mv.z, 0.05);
+  gl_PointSize = clamp(s, 1.5, 96.0);
+  float k = min(1.0, s / 1.5);
+  vA = (0.35 + 0.65 * abs(sin(uTime * (0.6 + aSeed) + aSeed * 50.0))) * k * k;
   gl_Position = projectionMatrix * mv;
 }`;
 const POINT_FS = `
@@ -136,7 +147,7 @@ function bustGeometry() {
 
 export async function createWorld(opts) {
   const noop = () => {};
-  const { canvas, books, authors = [], leftInset = () => 0.3, onProgress = noop, onHover = noop, onSelect = noop, onZone = noop, onNear = noop, onMoved = noop, onPage = noop } = opts;
+  const { canvas, books, authors = [], leftInset = () => 0.3, onProgress = noop, onHover = noop, onSelect = noop, onZone = noop, onNear = noop, onMoved = noop, onPage = noop, onQuality = noop } = opts;
   const SIGNS = {
     crestRing: '\u2726 LIFE COACH CODE \u2726 YOUR HOSTS \u2726 THE VIRTUAL BOOK FAIR \u2726 SPEAK YOUR BOOK ',
     floorRing: '\u2726 THE VIRTUAL BOOK FAIR \u2726 HOSTED BY LIFE COACH CODE ',
@@ -196,6 +207,12 @@ export async function createWorld(opts) {
   composer.setSize(window.innerWidth, window.innerHeight);
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.75, 0.6, 1.0);
+  // a tiny, very bright highlight would flare (and flicker as it moves): cap what feeds the glow
+  bloom.materialHighPassFilter.fragmentShader = bloom.materialHighPassFilter.fragmentShader.replace(
+    'vec4 texel = texture2D( tDiffuse, vUv );',
+    'vec4 texel = texture2D( tDiffuse, vUv );\ntexel.rgb = min( texel.rgb, vec3( 6.0 ) );'
+  );
+  bloom.materialHighPassFilter.needsUpdate = true;
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   const grade = new ShaderPass({
@@ -282,24 +299,33 @@ export async function createWorld(opts) {
   /* ---------- floor ---------- */
   const FLOOR_FRONT = 24, FLOOR_BACK = TEMPLE_Z - 13;
   const FLOOR_LEN = FLOOR_FRONT - FLOOR_BACK, FLOOR_Z = (FLOOR_FRONT + FLOOR_BACK) / 2, FLOOR_W = 28;
-  if (Q.reflector) {
-    const mirror = new Reflector(new THREE.PlaneGeometry(FLOOR_W, FLOOR_LEN), {
-      clipBias: 0.003,
-      textureWidth: Math.round(window.innerWidth * Q.dpr * 0.5),
-      textureHeight: Math.round(window.innerHeight * Q.dpr * 0.5),
-      color: 0x8a8090
-    });
-    mirror.rotation.x = -Math.PI / 2;
-    mirror.position.set(0, -0.002, FLOOR_Z);
-    scene.add(mirror);
+  // the mirror renders the whole hall a second time: it is the first thing lighter settings drop
+  let mirror = null;
+  const floorMat = new THREE.MeshStandardMaterial({
+    map: tex.floor, roughness: 0.22, metalness: 0.1,
+    transparent: Q.reflector, opacity: Q.reflector ? 0.74 : 1
+  });
+  function mirrorSize() {
+    const r = renderer.getPixelRatio() * 0.5;
+    return [Math.round(window.innerWidth * r), Math.round(window.innerHeight * r)];
   }
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(FLOOR_W, FLOOR_LEN),
-    new THREE.MeshStandardMaterial({
-      map: tex.floor, roughness: 0.22, metalness: 0.1,
-      transparent: Q.reflector, opacity: Q.reflector ? 0.74 : 1
-    })
-  );
+  function setMirror(on) {
+    if (on && !mirror) {
+      const [w, h] = mirrorSize();
+      mirror = new Reflector(new THREE.PlaneGeometry(FLOOR_W, FLOOR_LEN), { clipBias: 0.003, textureWidth: w, textureHeight: h, color: 0x8a8090 });
+      mirror.rotation.x = -Math.PI / 2;
+      mirror.position.set(0, -0.002, FLOOR_Z);
+      scene.add(mirror);
+    }
+    if (mirror) mirror.visible = on;
+    if (floorMat.transparent !== on) {
+      floorMat.transparent = on;
+      floorMat.opacity = on ? 0.74 : 1;
+      floorMat.needsUpdate = true;
+    }
+  }
+  setMirror(Q.reflector);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_W, FLOOR_LEN), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(0, 0, FLOOR_Z);
   floor.receiveShadow = true;
@@ -700,18 +726,18 @@ export async function createWorld(opts) {
     return { group: g, hinge, w, h, d, front, inside, endpaper, meshes: [back, pages, spine, cover] };
   }
 
-  /* the author of every book, waiting beside the booth as a hologram */
+  /* the author of every book, waiting beside the booth: their portrait rising from a beam of light */
   const holoGeo = bustGeometry();
   const holoParts = {
     pillar: new THREE.CylinderGeometry(0.08, 0.12, 0.92, 20),
     disc: new THREE.CylinderGeometry(0.15, 0.15, 0.03, 32),
     beam: new THREE.CylinderGeometry(0.11, 0.42, 0.62, 24, 1, true).rotateX(Math.PI),
-    face: new THREE.CircleGeometry(0.27, 48),
-    ring: new THREE.TorusGeometry(0.285, 0.022, 12, 72),
-    back: new THREE.CircleGeometry(0.3, 48).rotateY(Math.PI)
+    face: new THREE.CircleGeometry(0.31, 56),
+    ring: new THREE.TorusGeometry(0.325, 0.024, 12, 80),
+    back: new THREE.CircleGeometry(0.345, 56).rotateY(Math.PI)
   };
   const photoLoader = new THREE.TextureLoader();
-  // the author's portrait in a gold ring above the hologram: their photo, or their initials until it arrives
+  // the author's portrait in a gold ring: their photo, or their initials until it arrives
   function buildMedallion(author) {
     const g = new THREE.Group();
     const faceMat = new THREE.MeshBasicMaterial({ map: T.monogramTexture(author.mono || author.name.slice(0, 1)) });
@@ -728,10 +754,11 @@ export async function createWorld(opts) {
     const back = new THREE.Mesh(holoParts.back, mat.gold);
     back.position.z = -0.012;
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.radial, color: 0xffd9a0, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }));
-    halo.scale.set(1.05, 1.05, 1);
+    halo.scale.set(1.2, 1.2, 1);
     halo.position.z = -0.05;
     g.add(halo, back, face, ring);
     g.userData.hit = [face, ring];
+    g.userData.halo = halo;
     return g;
   }
   const holoMats = [];
@@ -744,12 +771,9 @@ export async function createWorld(opts) {
     return tagCache.get(key);
   };
   const medLook = new V3();
+  const PORTRAIT_Y = 1.52;
   function buildHolo(author, book) {
     const g = new THREE.Group();
-    const m = holoMaterial(new THREE.Color(1.0, 0.72, 0.38), 0.9);
-    holoMats.push(m);
-    const bust = new THREE.Mesh(holoGeo, m);
-    bust.position.y = 1.15;
     const pillar = new THREE.Mesh(holoParts.pillar, mat.gold);
     pillar.position.y = 0.46;
     const discMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.8, 0.5).multiplyScalar(2.2) });
@@ -760,12 +784,13 @@ export async function createWorld(opts) {
     beam.position.y = 1.25;
     const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTexture(author.name, 'Meet the author'), transparent: true, depthWrite: false }));
     tag.scale.set(0.98, 0.98 * 168 / 640, 1);
-    tag.position.y = 2.14;
+    tag.position.y = 2.16;
+    // the portrait stands where a silhouette would, under the name
     const med = buildMedallion(author);
-    med.position.y = 2.66;
-    g.add(pillar, disc, beam, bust, tag, med);
+    med.position.y = PORTRAIT_Y;
+    g.add(pillar, disc, beam, med, tag);
     const info = { kind: 'author', id: author.id, slug: book.slug };
-    [bust, pillar, tag, ...med.userData.hit].forEach((o) => { o.userData.info = info; clickables.push(o); });
+    [pillar, tag, ...med.userData.hit].forEach((o) => { o.userData.info = info; clickables.push(o); });
     const phase = Math.random() * 6.28;
     const h = { group: g, info, online: 0, onlineT: 0, author };
     h.setOnline = (on) => {
@@ -775,14 +800,13 @@ export async function createWorld(opts) {
     };
     h.update = (t, dt) => {
       h.onlineT = damp(h.onlineT, h.online, 3, dt);
-      bust.rotation.y = Math.sin(t * 0.4 + phase) * 0.35;
-      bust.position.y = 1.15 + Math.sin(t * 1.1 + phase) * 0.015;
       // the portrait turns gently to whoever is looking
       g.worldToLocal(medLook.copy(camera.position));
       med.rotation.y = damp(med.rotation.y, Math.atan2(medLook.x, medLook.z), 2.5, dt);
-      med.position.y = 2.66 + Math.sin(t * 0.9 + phase) * 0.025;
-      m.uniforms.uOpacity.value = 0.85 + 0.35 * h.onlineT;
-      beamMat.uniforms.uOpacity.value = 0.2 + 0.2 * h.onlineT;
+      med.position.y = PORTRAIT_Y + Math.sin(t * 0.9 + phase) * 0.02;
+      // here now: the light around them warms and breathes
+      med.userData.halo.material.opacity = 0.3 + h.onlineT * (0.32 + 0.1 * Math.sin(t * 2.2 + phase));
+      beamMat.uniforms.uOpacity.value = 0.2 + 0.22 * h.onlineT;
     };
     return h;
   }
@@ -1251,7 +1275,18 @@ export async function createWorld(opts) {
     if (customBook) {
       finale.group.remove(customBook.holder, customBook.stand);
       customBook.bk.meshes.forEach((m) => { const i = clickables.indexOf(m); if (i >= 0) clickables.splice(i, 1); });
-      customBook.coverTex.dispose();
+      // let go of everything the last cover used, so trying covers again and again stays light
+      // (the hall's shared materials and their textures stay)
+      const shared = new Set();
+      Object.values(mat).forEach((mt) => { shared.add(mt); ['map', 'emissiveMap', 'roughnessMap', 'normalMap'].forEach((k) => { if (mt[k]) shared.add(mt[k]); }); });
+      const gone = new Set();
+      [customBook.holder, customBook.stand].forEach((o) => o.traverse((m) => {
+        if (!m.isMesh) return;
+        gone.add(m.geometry);
+        [].concat(m.material).forEach((mt) => { gone.add(mt); ['map', 'emissiveMap'].forEach((k) => { if (mt[k]) gone.add(mt[k]); }); });
+      }));
+      gone.forEach((x) => { if (!shared.has(x) && x.dispose) x.dispose(); });
+      if (customBook.plateTex) customBook.plateTex.dispose();
       customBook = null;
     }
     if (!spec) {
@@ -1279,7 +1314,7 @@ export async function createWorld(opts) {
     finale.plate.material.map = pt;
     finale.plate.material.emissiveMap = pt;
     finale.plate.material.needsUpdate = true;
-    customBook = { holder, stand, bk, coverTex, base, phase: 0 };
+    customBook = { holder, stand, bk, coverTex, base, phase: 0, plateTex: pt };
   }
   animated.push((t) => {
     if (!customBook) return;
@@ -1429,7 +1464,7 @@ export async function createWorld(opts) {
     addPlace('oracle', 'The Book Oracle', ORACLE_POS.clone().addScaledVector(F, 2.4), ORACLE_POS.clone().add(new V3(0, 1.0, 0)));
   }
   booths.forEach((b) => {
-    // wide screens: the author's hologram, the book and the themed piece; phones: the book and the piece
+    // wide screens: the author's portrait, the book and the themed piece; phones: the book and the piece
     const F = boothDir(b);
     const center = boothWorld(b, new V3(b.holo ? 0.2 : 0.95, 1.25, 0));
     const p = center.clone().addScaledVector(F, b.holo ? 4.5 : 4.1);
@@ -1565,9 +1600,10 @@ export async function createWorld(opts) {
       const active = inputEnabled && !focus && introT >= 1;
       let fw = 0, st = 0, turn = 0;
       if (active) {
+        // W S walk, A D turn the view (like the arrow keys); the mouse still looks around
         fw = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + joy.y;
-        st = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x;
-        turn = (keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0);
+        st = joy.x;
+        turn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
       }
       player.yawT += turn * 1.9 * dt;
       if (player.seated && (fw || st)) player.seated = false;
@@ -1933,28 +1969,72 @@ export async function createWorld(opts) {
     im.src = asset(`assets/img/covers/${b.book.slug}-full.webp`);
   }
 
-  /* ---------- adaptive quality ---------- */
-  let perfFrames = 0, perfTime = 0, perfChecked = false;
-  function checkPerf(dt) {
-    if (perfChecked || introT < 1) return;
-    perfFrames++;
-    perfTime += dt;
-    if (perfFrames >= 90) {
-      perfChecked = true;
-      const fps = perfFrames / perfTime;
-      if (fps < 38) {
-        const dpr = Math.max(1, renderer.getPixelRatio() * 0.75);
-        renderer.setPixelRatio(dpr);
-        composer.setPixelRatio(dpr);
-        resize();
-        if (fps < 28) { bloom.enabled = false; renderer.shadowMap.enabled = false; }
-      }
+  /* ---------- quality: levels, auto step-down, resting frame rates ---------- */
+  // Long visits used to get slower: the hall kept drawing at full quality (twice over for the
+  // mirror) and devices heat up and throttle. Now it rests when nobody moves or a panel covers
+  // it, and in Auto it steps down whenever it can't keep up, not just once at the start.
+  const DPR = window.devicePixelRatio || 1;
+  // on a phone the hall is seen up close on a small, bright screen: a gentler glow keeps the books readable
+  const glow = coarse || small ? 0.45 : 0.75;
+  const LEVELS = {
+    high: { dpr: Math.min(DPR, (navigator.hardwareConcurrency || 8) >= 8 ? 2 : 1.75), mirror: true, shadows: true, bloom: glow, msaa: 4, fps: 60 },
+    balanced: { dpr: Math.min(DPR, 1.5), mirror: false, shadows: false, bloom: glow * 0.9, msaa: 2, fps: 60 },
+    light: { dpr: Math.min(DPR, 1), mirror: false, shadows: false, bloom: 0, msaa: 0, fps: 30 }
+  };
+  const ORDER = ['high', 'balanced', 'light'];
+  let qMode = 'auto', qLevel = lowEnd ? 'balanced' : 'high', fpsCap = 60, covered = false;
+  let lastInput = performance.now(), lastRender = 0;
+  const perf = { t: 0, n: 0, slow: 0 };
+  function setSamples(n) {
+    [composer.renderTarget1, composer.renderTarget2].forEach((t) => { if (t.samples !== n) { t.samples = n; t.dispose(); } });
+  }
+  function applyLevel(name) {
+    const L = LEVELS[name];
+    qLevel = name;
+    if (Math.abs(renderer.getPixelRatio() - L.dpr) > 0.01) {
+      renderer.setPixelRatio(L.dpr);
+      composer.setPixelRatio(L.dpr);
+      resize();
     }
+    bloom.enabled = L.bloom > 0;
+    bloom.strength = L.bloom;
+    renderer.shadowMap.enabled = L.shadows && Q.shadows;
+    setMirror(L.mirror);
+    setSamples(L.msaa);
+    fpsCap = L.fps;
+    perf.t = perf.n = perf.slow = 0;
+    onQuality({ mode: qMode, level: qLevel });
+  }
+  function setQuality(mode) {
+    qMode = LEVELS[mode] ? mode : 'auto';
+    applyLevel(qMode === 'auto' ? (lowEnd ? 'balanced' : 'high') : qMode);
+  }
+  const anyKey = () => MOVE_KEYS.some((k) => keys[k]);
+  function frameGap(now) {
+    if (covered) return 1000 / 15;
+    const resting = now - lastInput > 20000 && !travel && introT >= 1 && !anyKey() && !joy.x && !joy.y;
+    return 1000 / (resting ? Math.min(30, fpsCap) : fpsCap);
+  }
+  function checkPerf(gapMs, aim) {
+    // only judged while it is meant to run at full speed, and never in the first seconds
+    if (qMode !== 'auto' || introT < 1 || aim > 17.5 || gapMs > 1000) { perf.t = perf.n = 0; return; }
+    perf.n++;
+    perf.t += gapMs / 1000;
+    if (perf.t < 4) return;
+    const fps = perf.n / perf.t;
+    perf.t = perf.n = 0;
+    perf.slow = fps < 36 ? perf.slow + 1 : 0;
+    const i = ORDER.indexOf(qLevel);
+    if (perf.slow >= 2 && i < ORDER.length - 1) applyLevel(ORDER[i + 1]);
   }
 
   function frame(now) {
     if (!running) return;
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const aim = frameGap(now);
+    if (now - lastRender < aim - 2) { requestAnimationFrame(frame); return; }
+    const gapMs = lastRender ? now - lastRender : 16.7;
+    lastRender = now;
+    const dt = Math.min(0.07, (now - last) / 1000);
     last = now;
     elapsed += dt;
     const wall = Math.min(0.25, (now - (lastWall || now)) / 1000);
@@ -1984,7 +2064,7 @@ export async function createWorld(opts) {
       c.getContext('2d').drawImage(canvas, 0, 0);
       captureWaiters.splice(0).forEach((fn) => fn(c));
     }
-    checkPerf(dt);
+    checkPerf(gapMs, aim);
     requestAnimationFrame(frame);
   }
 
@@ -2002,6 +2082,7 @@ export async function createWorld(opts) {
     camera.aspect = W / H;
     camera.updateProjectionMatrix();
     updatePointScale();
+    if (mirror) mirror.getRenderTarget().setSize(...mirrorSize());
   }
   window.addEventListener('resize', resize, { passive: true });
   updatePointScale();
@@ -2018,6 +2099,8 @@ export async function createWorld(opts) {
     }
   });
   window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+  const markInput = () => { lastInput = performance.now(); };
+  ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart'].forEach((t) => window.addEventListener(t, markInput, { passive: true }));
   window.addEventListener('blur', () => { Object.keys(keys).forEach((k) => { keys[k] = false; }); });
 
   const ray = new THREE.Raycaster();
@@ -2103,7 +2186,7 @@ export async function createWorld(opts) {
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) running = false;
-    else if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); }
+    else if (!running) { running = true; last = lastInput = performance.now(); requestAnimationFrame(frame); }
   });
 
   /* ---------- lazy HD + inside pages for the focused book ---------- */
@@ -2120,6 +2203,7 @@ export async function createWorld(opts) {
     loadHD(b);
   }
 
+  setQuality(opts.quality);
   // compile everything before the first visible frame to avoid hitches
   renderer.compile(scene, camera);
   requestAnimationFrame(frame);
@@ -2127,8 +2211,9 @@ export async function createWorld(opts) {
   return {
     places: places.map((p) => ({ id: p.id, label: p.label })),
     startIntro(skip) { introStarted = true; if (skip) introT = 1; },
-    travelTo,
+    travelTo(id, o) { lastInput = performance.now(); travelTo(id, o); },
     focus(slug) {
+      lastInput = performance.now();
       const b = booths.find((x) => x.book.slug === slug) || null;
       if (b) {
         prepareBooth(b);
@@ -2140,7 +2225,7 @@ export async function createWorld(opts) {
       focus = b;
       if (b) { hovered = null; onHover(null); }
     },
-    setMove(x, y) { joy.x = x; joy.y = y; if ((x || y) && travel) travel = null; },
+    setMove(x, y) { joy.x = x; joy.y = y; lastInput = performance.now(); if ((x || y) && travel) travel = null; },
     travelNear,
     sit,
     isTraveling: () => !!travel,
@@ -2167,6 +2252,10 @@ export async function createWorld(opts) {
     pulse(kind) { if (kind === 'stage') stageBoost = 1; },
     stats: () => ({ book: focus ? { present: +focus.present.toFixed(3), hinge: +focus.bk.hinge.rotation.y.toFixed(3), spread: focus.spread, turning: !!focus.turn, leaf: focus.leaf ? { visible: focus.leaf.group.visible, rot: +focus.leaf.group.rotation.y.toFixed(3) } : null } : null, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries, player: player.pos.toArray().map((v) => +v.toFixed(2)), zone, near: near ? near.info : null }),
     quality: Q,
+    setQuality,
+    qualityState: () => ({ mode: qMode, level: qLevel, dpr: renderer.getPixelRatio(), fps: fpsCap }),
+    // a panel covers the hall: keep it alive, but at a resting frame rate
+    setCovered(v) { covered = !!v; if (!v) lastInput = performance.now(); },
     debug: { bloom: (v) => { bloom.enabled = v; }, scene, renderer, camera, composer }
   };
 }

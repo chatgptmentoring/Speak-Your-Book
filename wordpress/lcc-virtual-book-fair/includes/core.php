@@ -18,7 +18,7 @@ function lcc_vbf_data() {
 			'authors' => array(),
 			'event'   => array(),
 		));
-		$data['event'] = wp_parse_args($data['event'], array('date' => '', 'register' => '', 'zoom' => '', 'stream' => ''));
+		$data['event'] = wp_parse_args($data['event'], array('date' => '', 'register' => '', 'registerEmbed' => '', 'zoom' => ''));
 	}
 	return $data;
 }
@@ -35,9 +35,9 @@ function lcc_vbf_defaults() {
 	return array(
 		'page_id'        => 0,
 		'start'          => '', // local date and time in the site's time zone, Y-m-d\TH:i
-		'register'       => '',
+		'register'       => '', // the registration form's link
+		'register_embed' => '', // and its embed address, when it is a Google Form
 		'zoom'           => '',
-		'stream'         => '',
 		'schedule'       => '',
 		'live'           => 1,
 		'ga'             => '',
@@ -280,3 +280,41 @@ function lcc_vbf_purge_page_cache() {
 	do_action('litespeed_purge_post', $id);
 	do_action('lcc_vbf_purge_page_cache', $id);
 }
+
+/*
+ * The registration form, given as a link or as the embed code Google Forms offers (Send > <>).
+ * Returns its link and, for a Google Form, the address that shows it inside the fair.
+ */
+function lcc_vbf_form_urls($given) {
+	$given = trim((string) $given);
+	if ($given === '') {
+		return array('link' => '', 'embed' => '');
+	}
+	if (stripos($given, '<iframe') !== false) {
+		if (!preg_match('/\ssrc\s*=\s*["\']([^"\']+)["\']/i', $given, $m)) {
+			return array('link' => '', 'embed' => '');
+		}
+		$given = html_entity_decode($m[1]);
+	}
+	if (!filter_var($given, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $given)) {
+		return array('link' => '', 'embed' => '');
+	}
+	// a forms.gle short link: ask Google where it leads, once, when the settings are saved
+	if (preg_match('#^https?://forms\.gle/#i', $given)) {
+		$r   = wp_remote_head($given, array('redirection' => 0, 'timeout' => 8));
+		$loc = is_wp_error($r) ? '' : wp_remote_retrieve_header($r, 'location');
+		$full = is_string($loc) && preg_match('#^https://docs\.google\.com/forms/#', $loc) ? $loc : '';
+		return array('link' => esc_url_raw($given), 'embed' => $full ? lcc_vbf_form_embed($full) : '');
+	}
+	if (preg_match('#^https://docs\.google\.com/forms/#', $given)) {
+		$link = remove_query_arg('embedded', $given);
+		return array('link' => esc_url_raw($link), 'embed' => lcc_vbf_form_embed($given));
+	}
+	return array('link' => esc_url_raw($given), 'embed' => '');
+}
+
+function lcc_vbf_form_embed($url) {
+	$url = preg_replace('#/(viewform|formResponse)?(\?.*)?$#', '/viewform', strtok($url, '#'));
+	return esc_url_raw(add_query_arg('embedded', 'true', $url));
+}
+

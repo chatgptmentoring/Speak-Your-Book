@@ -80,7 +80,7 @@ if (!defined('ABSPATH')) {
 }
 return array(
 \t'build'   => ${php(build)},
-\t'event'   => ${php({ date: E.date || '', register: E.register || '', zoom: (E.stream && E.stream.zoom) || '', stream: (E.stream && E.stream.url) || '' })},
+\t'event'   => ${php({ date: E.date || '', register: E.register || '', registerEmbed: E.registerEmbed || '', zoom: E.zoom || (E.stream && E.stream.zoom) || '' })},
 \t'authors' => array(
 ${authors.map((a) => `\t\t${php(a)},`).join('\n')}
 \t),
