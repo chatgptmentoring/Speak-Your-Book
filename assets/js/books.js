@@ -366,6 +366,14 @@ window.FAIR_EVENT = {
   where: 'Live on Zoom',
   price: 'Free',
   register: 'https://forms.gle/DCKC79M3vk3nCYMb8',
+  // The live talks inside the fair. Zoom meetings can't be shown inside another website, so
+  // stream the Zoom to YouTube Live (Zoom: Settings > In Meeting (Advanced) > Allow livestreaming)
+  // and paste the YouTube link here. Vimeo links work too. Visitors then watch in a window
+  // beside them as they walk, or full screen. zoom: the join link, for anyone who wants to take part.
+  stream: { url: '', zoom: '' },
+  // Who speaks when, once it is decided. time: as visitors should read it, e.g. '5:00 pm GMT'.
+  // schedule: [{ time: '5:00 pm GMT', author: 'chuck-barnard', title: 'Raising resilient teens' }]
+  schedule: [],
   about: 'A free, live virtual event on Zoom, hosted by Life Coach Code. Every author in this fair speaks at the event: come and meet them live.'
 };
 
@@ -405,16 +413,98 @@ window.FAIR_ANALYTICS = { enabled: false };
    ========================================================================= */
 window.FAIR_AUTHOR_EXTRAS = {
   // inbox: where "Send a message" goes (see FAIR_CONTACT below). Leave it empty to hide the button.
-  'soonjin-cho': { inbox: '' },
-  'edith-moricz': { inbox: '' },
-  'chuck-barnard': { inbox: '' },
-  'sonia-jenkins': { inbox: '' },
-  'susan-j-razavi': { inbox: '' },
-  'tanya-fasnacht-jolliffe': { inbox: '' },
-  'jessica-v-fuentes': { inbox: '' },
-  'jennifer-a-schmeisser': { inbox: '' },
-  'monika-puiu': { inbox: '' },
-  'dolores-fazzino': { inbox: '' }
+  // bio: shown in the author's panel and used by the guide. Keep it to what the author has published.
+  'soonjin-cho': {
+    inbox: 'hugloveheal@gmail.com',
+    linkedin: 'https://www.linkedin.com/in/soonjin-cho-b2bba0254/',
+    interview: 'https://www.lifecoachcode.com/2024/07/28/find-life-coach-soonjin-cho/'
+  },
+  'edith-moricz': {
+    inbox: 'edith.t.moriczrfc@gmail.com',
+    linkedin: 'https://www.linkedin.com/in/edithmoricz/',
+    profile: 'https://www.lifecoachcode.com/members/edith/'
+  },
+  'chuck-barnard': {
+    inbox: 'charles.barnard@successinstitutes.co',
+    website: 'https://coachchuck360.com/',
+    linkedin: 'https://www.linkedin.com/in/chuck-barnard-6304b154/',
+    profile: 'https://www.lifecoachcode.com/members/chuck-barnard/',
+    bio: 'Author, speaker and Champion’s Mindset mentor for teens, families, athletes, homeschoolers and entrepreneurs, after 30 years in education. Chuck holds a master’s degree in special education and certifications in NLP and hypnotherapy.'
+  },
+  'sonia-jenkins': {
+    inbox: 'hello@soniajenkins.co.uk',
+    website: 'https://soniajenkins.co.uk/',
+    linkedin: 'https://www.linkedin.com/in/soniajenkinsfmchc/',
+    profile: 'https://www.lifecoachcode.com/members/sonia-jenkins/',
+    bio: 'A Certified Functional Medicine Health Coach in Wales, drawing on more than 45 years as an NHS health professional. Sonia works with high-achieving women over 40 on healthy ageing, stress and energy.'
+  },
+  'susan-j-razavi': {
+    inbox: 'susanjrazavi@gmail.com',
+    linkedin: 'https://www.linkedin.com/in/susan-j-razavi-lcsw-r-tranceplan-53188817/',
+    profile: 'https://www.lifecoachcode.com/members/tranceplan/',
+    bio: 'A veteran psychotherapist (LCSW-R) and clinical hypnotherapist in New York, with an integrative approach that bridges science, mindfulness and spirituality. Susan developed TrancePlan, a personalised approach to hypnotherapy.'
+  },
+  'tanya-fasnacht-jolliffe': {
+    inbox: 'tanya@litwellnesssolutions.com',
+    website: 'https://litwellnesssolutions.com/',
+    linkedin: 'https://www.linkedin.com/in/tanya-fasnacht-jolliffe/',
+    profile: 'https://www.lifecoachcode.com/members/tanya-fasnacht-jolliffe/',
+    bio: 'A non-diet registered dietitian and the founder of L I T Wellness Solutions, offering non-diet nutrition care, wellness integration and health coaching under the motto “IGNITE the Change Within”.'
+  },
+  'jessica-v-fuentes': {
+    inbox: 'jessica.fuentes@empowered-selflove.com',
+    website: 'https://empowered-selflove.com/',
+    linkedin: 'https://www.linkedin.com/in/jessica-v-fuentes-cpc-03679a20/',
+    profile: 'https://www.lifecoachcode.com/members/jessica-fuentes/'
+  },
+  'jennifer-a-schmeisser': {
+    inbox: 'jensmizer@yahoo.com',
+    linkedin: 'https://www.linkedin.com/in/jenniferschmeisser7/',
+    profile: 'https://www.lifecoachcode.com/members/jennifer-schmeisser/'
+  },
+  'monika-puiu': {
+    inbox: 'monika.puiu@wayra-astrae.ro',
+    website: 'https://wayra-astrae.ro/',
+    linkedin: 'https://www.linkedin.com/in/monika-maria-puiu/',
+    profile: 'https://www.lifecoachcode.com/members/monika-maria/'
+  },
+  'dolores-fazzino': {
+    inbox: 'doloresfazzino@gmail.com',
+    website: 'https://drdoloresfazzino.com/',
+    linkedin: 'https://www.linkedin.com/in/doloresfazzino/',
+    profile: 'https://www.lifecoachcode.com/members/dolores/',
+    bio: 'A nurse practitioner (DNP) and medical intuitive with over 40 years of experience, combining energy healing and intuitive counselling with conventional medicine.'
+  }
+};
+
+/* What each booth's themed piece shows (the guide describes it to visitors). */
+window.FAIR_STANDS = {
+  'finding-love-in-the-mirror': 'A gilded mirror with wings of fire rising behind it. Look into it and a winged silhouette looks back, the reflection from the cover brought to life.',
+  'clarity-before-momentum': 'A signpost pointing to Clarity, Purpose and Momentum, at the start of a winding road that leads to a rising sun.',
+  'teen-mental-health': 'Glowing app icons orbiting a bright young mind: the constant pull of screens that teenagers live with.',
+  'the-invisible-midlife-woman': 'A little wooden dock reaching into a misty pond at sunrise: a quiet place to be seen again.',
+  'conscious-integrative-therapy': 'A slowly turning Sri Yantra, an ancient pattern of sacred geometry, floating above a glowing lotus.',
+  'more-than-a-game': 'A great brass compass whose four points read Character, Resilience, Effort and Joy.',
+  'food-isnt-the-problem': 'Three stepping stones for the book’s 3-Step Path, Name it, Claim it and Reframe it, each with its symbol from the cover and a ribbon of light flowing back to the book.',
+  'prince-and-the-prodigal': 'Two friends standing side by side, facing a sunset over the mountains, as on the cover.',
+  'journey-to-empowerment': 'An open drawer with golden vines growing out of it: what we once tucked away can still bloom.',
+  'when-the-blueprint-burned': 'A vintage typewriter, with blueprints drifting up from it as glowing embers.',
+  'everything-happens-for-you': 'An hourglass of glowing sand: every grain falls for a reason.',
+  'healing-unraveled': 'A golden birdcage with its door open and a radiant diamond inside.'
+};
+
+/* =========================================================================
+   The AI guide
+   The guide always works on its own, answering from this file. Connect it to OpenAI for
+   free-form conversation by installing the Fair Guide plugin on lifecoachcode.com
+   (tools/lcc-fair-guide) and pasting its address below. The OpenAI key lives only in the
+   plugin's settings on your WordPress site, never in this public code.
+   ========================================================================= */
+window.FAIR_GUIDE = {
+  enabled: true,
+  name: 'Your fair guide',
+  // e.g. 'https://www.lifecoachcode.com/wp-json/lcc-fair/v1/guide'
+  endpoint: ''
 };
 
 /* =========================================================================

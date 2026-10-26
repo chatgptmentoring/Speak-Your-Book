@@ -6,6 +6,7 @@
 import { createLive, EMOTES } from './live.js';
 import * as K from './keepsakes.js';
 import { createAmbience } from './ambience.js';
+import { createGuide } from './guide.js';
 
 const BOOKS = window.FAIR_BOOKS || [];
 const INTENTS = window.FAIR_INTENTS || [];
@@ -896,6 +897,7 @@ function interact(info) {
     case 'seat':
       if (world) world.sit(info.index >= 0 ? info.index : 0);
       Sound.play('step');
+      if (LiveStream.isOn()) setTimeout(() => LiveStream.open('theatre'), 1200);
       setTimeout(() => toast(EventInfo && EventInfo.upcoming() ? `<i>✦</i> Front row saved for you. On ${esc(EventInfo.dateLong())} the authors speak here, live.` : '<i>✦</i> Front row. Every book here began with a voice.', 4200), 900);
       break;
     case 'peer':
@@ -1094,7 +1096,7 @@ const EventUI = (() => {
       const here = People.isOnline(a.id);
       return `<li><button type="button" data-place="book-${b.slug}">
         <img src="${coverSrc(b, 480)}" alt="" loading="lazy">
-        <span><b>${esc(a.displayName)}</b><small>${a.books.map((s) => esc(bySlug[s].title)).join(' · ')}</small>${here ? '<em>● At the fair now</em>' : ''}</span></button></li>`;
+        <span><b>${esc(a.displayName)}</b><small>${(EVENT.schedule || []).filter((x) => x.author === a.id).map((x) => esc(x.time) + ' · ').join('')}${a.books.map((s) => esc(bySlug[s].title)).join(' · ')}</small>${here ? '<em>● At the fair now</em>' : ''}</span></button></li>`;
     }).join('');
   }
   function init() {
@@ -1141,7 +1143,9 @@ const AuthorPanel = (() => {
       <div class="au__head">${a.photo ? `<img class="au__photo" src="${esc(a.photo)}" alt="">` : `<span class="au__mono" aria-hidden="true">${esc(initials(a.name))}</span>`}
         <div><p class="eyebrow">Meet the author</p><h2 class="sheet__title" id="au-name">${esc(a.displayName)}</h2>${a.credentials ? `<p class="au__cred">${esc(a.credentials)}</p>` : ''}</div></div>
       <p class="au__status${here ? ' is-online' : ''}">${here ? '<i></i>Here at the fair right now' : `<i></i>${esc(eventLine())}`}</p>
+      ${a.bio ? `<p class="au__bio">${esc(a.bio)}</p>` : ''}
       ${a.welcome ? `<blockquote class="bi__hook">${esc(a.welcome)}</blockquote>` : ''}
+      ${authorLinksHtml(a)}
       ${a.voice ? `<p class="au__voice"><span>A welcome from ${esc(a.displayName)}</span><audio controls preload="none" src="${esc(a.voice)}"></audio></p>` : ''}
       <h3 class="bi__h">${books.length > 1 ? 'Their books at the fair' : 'Their book at the fair'}</h3>
       <ul class="au__books">${books.map((b) => `<li><button type="button" data-open="${b.slug}"><img src="${coverSrc(b, 480)}" alt="" loading="lazy"><span><b>${esc(b.title)}</b><small>${isSoon(b) ? 'Coming soon' : esc(b.subtitle)}</small></span></button></li>`).join('')}</ul>
@@ -1149,9 +1153,12 @@ const AuthorPanel = (() => {
         ${EventInfo && EventInfo.upcoming() ? `<a class="btn btn--gold" data-event-register href="${esc(EVENT.register)}" target="_blank" rel="noopener">Register free to meet them live</a>` : `<a class="btn btn--gold" href="${LINKS.discovery}" target="_blank" rel="noopener">Speak your own book</a>`}
         ${here ? `<button class="btn btn--ghost" type="button" data-wave="${here.id}">Wave hello 👋</button><button class="btn btn--ghost" type="button" data-go="${here.id}">Walk over</button>` : ''}
         ${inboxOf(a) ? '<button class="btn btn--ghost" type="button" data-msg>Send a message ✉</button>' : ''}
-        ${a.website ? `<a class="text-link" href="${esc(a.website)}" target="_blank" rel="noopener">Visit their website →</a>` : ''}
       </div>
       ${inboxOf(a) ? messageForm(a) : ''}`;
+  }
+  function authorLinksHtml(a) {
+    const l = [[a.website, 'Website'], [a.linkedin, 'LinkedIn'], [a.profile, 'Life Coach Code profile'], [a.interview, 'Interview']].filter(([u]) => u);
+    return l.length ? `<p class="au__links">${l.map(([u, t]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${t} <span aria-hidden="true">↗</span></a>`).join('')}</p>` : '';
   }
   // where a message to this author is emailed: their own inbox, or Life Coach Code's to pass along
   const inboxOf = (a) => (CONTACT.enabled ? (a.inbox || CONTACT.fallbackInbox || '').trim() : '');
@@ -1208,13 +1215,14 @@ const AuthorPanel = (() => {
       fail('The message could not be sent just now. Please try again in a moment.');
     }
   }
-  function open(id) {
+  function open(id, { message = false } = {}) {
     if (!authorById[id]) return;
     currentId = id;
     render();
     sheet.open();
     Sound.play('open');
     track('author_open', { author: id });
+    if (message) setTimeout(() => { const b = $('[data-msg]', sheet.el); if (b) b.click(); }, 120);
   }
   sheet.el.addEventListener('click', (e) => {
     if (e.target.closest('[data-open]')) { sheet.close(); return; }
@@ -1717,9 +1725,71 @@ function doAction(name) {
     case 'photo': takePhoto(); break;
     case 'map': MapPanel.open(); break;
     case 'sound': Sound.toggle(); break;
+    case 'guide': if (Guide) Guide.open(); break;
+    case 'watch': LiveStream.open(); break;
     default:
   }
 }
+
+/* =========================================================================
+   The live talks: a window beside you as you walk, bigger, or full screen
+   ========================================================================= */
+const LiveStream = (() => {
+  const S = (EVENT && EVENT.stream) || {};
+  const el = $('#live'), frame = $('#live-frame');
+  // YouTube and Vimeo links become their embeddable players; anything else is used as given
+  function toEmbed(u) {
+    if (!u || !/^https:\/\//.test(u)) return '';
+    let m = u.match(/(?:youtube\.com\/(?:watch\?v=|live\/|embed\/)|youtu\.be\/)([\w-]{6,})/);
+    if (m) return `https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&playsinline=1&rel=0`;
+    m = u.match(/vimeo\.com\/event\/(\d+)/);
+    if (m) return `https://vimeo.com/event/${m[1]}/embed`;
+    m = u.match(/vimeo\.com\/(\d+)/);
+    if (m) return `https://player.vimeo.com/video/${m[1]}?autoplay=1`;
+    return u;
+  }
+  const src = toEmbed(S.url);
+  const phase = () => (EventInfo ? EventInfo.status().phase : 'after');
+  function setMode(mode) {
+    el.dataset.mode = mode;
+    document.documentElement.classList.toggle('is-watching', mode !== 'min');
+    document.documentElement.classList.toggle('is-theatre', mode === 'theatre');
+  }
+  function open(mode = 'dock') {
+    if (!src) { EventUI.open(); return; }
+    if (!frame.getAttribute('src')) frame.src = src;
+    el.hidden = false;
+    setMode(mode);
+    track('stream_open', { mode });
+  }
+  function close() {
+    el.hidden = true;
+    frame.removeAttribute('src');
+    document.documentElement.classList.remove('is-watching', 'is-theatre');
+  }
+  function init() {
+    if (!src) return;
+    $$('[data-do="watch"]').forEach((b) => { b.hidden = false; });
+    if (S.zoom) { const z = $('#live-zoom'); z.href = S.zoom; z.hidden = false; }
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-live]');
+      if (!b) { if (el.dataset.mode === 'min' && e.target.closest('.live__bar')) setMode('dock'); return; }
+      const a = b.getAttribute('data-live');
+      if (a === 'close') close();
+      if (a === 'min') setMode(el.dataset.mode === 'min' ? 'dock' : 'min');
+      if (a === 'theatre') setMode(el.dataset.mode === 'theatre' ? 'dock' : 'theatre');
+      if (a === 'full') { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) f.call(el); else setMode('theatre'); }
+    });
+    // on the day, the talks open by themselves in the corner (once per visit)
+    if (phase() === 'live' && !sessionStorage.getItem('lcc-fair-stream')) {
+      try { sessionStorage.setItem('lcc-fair-stream', '1'); } catch (e) { /* private mode */ }
+      setTimeout(() => open('dock'), 4000);
+    }
+  }
+  return { init, open, close, available: () => !!src, isOn: () => !!src && ['live', 'today', 'soon'].includes(phase()) };
+})();
+
+let Guide = null;
 const More = (() => {
   const btn = $('#more-btn'), menu = $('#more');
   function set(open) {
@@ -1849,6 +1919,29 @@ async function boot() {
   Creator.init();
   Tour.init();
   More.init();
+  LiveStream.init();
+  const G = window.FAIR_GUIDE || {};
+  if (G.enabled !== false) {
+    Guide = createGuide({
+      data: { BOOKS, AUTHORS, EVENT, LINKS, STANDS: window.FAIR_STANDS || {}, CFG: G },
+      eventInfo: EventInfo,
+      store,
+      track,
+      zone: () => (world ? world.zone() : Context.current()),
+      act: {
+        goto: (id) => goPlace(id),
+        book: (slug) => Detail.open(slug),
+        author: (id) => AuthorPanel.open(id),
+        message: (id) => AuthorPanel.open(id, { message: true }),
+        event: () => EventUI.open(),
+        creator: () => Creator.open(),
+        tour: () => Tour.start(),
+        watch: () => LiveStream.open(),
+        canWatch: () => LiveStream.available()
+      }
+    });
+    Guide.hello();
+  } else $('#guide').hidden = true;
   $('#photo-btn').addEventListener('click', takePhoto);
 
   const loader = $('#loader'), loaderBar = $('#loader-bar'), loaderMsg = $('#loader-msg');
@@ -1888,7 +1981,7 @@ async function boot() {
       onProgress: setLoad,
       onHover: (info, x, y) => tooltip(Detail.isOpen() ? null : info, x, y),
       onSelect: (info) => interact(info),
-      onZone: (id) => { if (!Detail.isOpen()) Context.show(id); },
+      onZone: (id) => { if (!Detail.isOpen()) Context.show(id); if (Guide) Guide.zoneChanged(id); },
       onNear: (info) => Prompt.set(info),
       onMoved: () => Hints.moved()
     });

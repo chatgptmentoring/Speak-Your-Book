@@ -94,15 +94,57 @@ Paste the printed `authorKeys` into `books.js`, publish, and send each author th
 **Never commit the links.** An author can stop appearing as the author from the *Who's here*
 panel.
 
+## The AI guide
+
+A guide lives in the bottom-right corner. Visitors can ask it anything at any time: when the
+live event is, who is speaking, what a book is about, who an author is, how to create their own
+book. It answers with clear, formatted replies and buttons that walk them to a booth, open a
+book or an author, register for the event or open the right link. When a visitor reaches a
+booth, it offers a short description of that booth's themed piece. Visitors can
+switch tips off (bell), have answers read aloud (speaker), or put the guide away entirely; it
+comes back from the `⋯` menu.
+
+The guide works straight away on its own, answering from `books.js`. To let it hold free-form
+conversations through OpenAI (for example gpt-4o-mini), connect it through the WordPress plugin
+in `tools/lcc-fair-guide`, which keeps the API key private:
+
+1. On lifecoachcode.com: **Plugins → Add New → Upload Plugin**, choose
+   `tools/lcc-fair-guide.zip`, then **Activate**.
+2. **Settings → Fair Guide**: paste the OpenAI API key and save. The page shows the guide's
+   address (`…/wp-json/lcc-fair/v1/guide`).
+3. Put that address in `FAIR_GUIDE.endpoint` in `assets/js/books.js` and publish.
+4. In your OpenAI account, set a monthly budget limit for the key's project.
+
+**Never put an API key in this repository or in the site's code**: everything here is public.
+The plugin only answers requests from the fair's own address, limits questions per visitor per
+hour and per day, and the guide falls back to its own answers if the plugin is unavailable.
+
+The guide only speaks from the fair's facts. To let it say who speaks when, fill in
+`FAIR_EVENT.schedule` in `books.js`. Author bios, websites, LinkedIn and Life Coach Code
+profiles live in `FAIR_AUTHOR_EXTRAS`, and the description of each booth's piece in `FAIR_STANDS`.
+
+## Watching the talks inside the fair
+
+Zoom meetings can't be shown inside another website, so stream the Zoom to YouTube Live
+(in Zoom: **Settings → In Meeting (Advanced) → Allow livestreaming of meetings**, then
+**More → Live on YouTube** during the meeting). Paste the YouTube link into
+`FAIR_EVENT.stream.url` and the Zoom join link into `FAIR_EVENT.stream.zoom`.
+
+Visitors then get a **Watch the live talks** button (event panel, `⋯` menu, the guide). The
+stream plays in a window beside them while they keep walking the fair. They can make it
+bigger, go full screen, minimise it, or press **Join on Zoom** to take part. Sitting in a seat by the stage opens it large. Once a start
+time is set in `FAIR_EVENT.start`, the window opens by itself when the event goes live.
+Vimeo links work too.
+
 ## Messages to authors
 
 Each author's panel can show a **Send a message** button. Visitors write their name, email and
 message, and it arrives in the author's inbox as an email they can simply reply to. The site
 has no server, so messages are delivered by FormSubmit (https://formsubmit.co, free).
 
-1. In `assets/js/books.js`, fill in `inbox` for each author in `FAIR_AUTHOR_EXTRAS` with their
-   email address. Authors with an empty `inbox` show no button.
-2. Publish, then send one test message to each author. FormSubmit emails that inbox a one-time
+1. Each author's `inbox` in `FAIR_AUTHOR_EXTRAS` (`assets/js/books.js`) holds their email
+   address. Authors with an empty `inbox` show no button.
+2. Send one test message to each author. FormSubmit emails that inbox a one-time
    **Activate** link; once it is clicked, every message arrives normally.
 3. Optional, for privacy: the activation email also gives a random alias for the address.
    Put the alias in `inbox` instead of the email, so the address is not visible in the site's code.
@@ -168,8 +210,10 @@ assets/js/textures.js    posters, signs, crest, pages and name tags drawn on can
 assets/js/live.js        live presence (a small MQTT client) and author signatures
 assets/js/keepsakes.js   your cover, postcards, framed photos, certificates
 assets/js/ambience.js    the spatial soundscape of the booths
+assets/js/guide.js       the AI guide (built-in answers + OpenAI through the plugin)
 assets/img/covers/       optimised covers (480 / 800 / full / glow)
 assets/img/originals/    the covers as supplied
 tools/make_covers.py     prepares covers for a new book
 tools/author-links.mjs   makes private author links
+tools/lcc-fair-guide/    the WordPress plugin that connects the guide to OpenAI (+ .zip)
 ```

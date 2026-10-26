@@ -95,6 +95,8 @@
     <nav class="more" id="more" aria-label="More things to do" hidden>
       <button type="button" data-do="tour"><i aria-hidden="true">&#10148;</i><span><b>Guided tour</b><small>Let the fair walk you through</small></span></button>
       <button type="button" data-do="event"><i aria-hidden="true">&#9679;</i><span><b>The live event</b><small data-event="menu">Speak Your Book, live on Zoom</small></span></button>
+      <button type="button" data-do="guide"><i aria-hidden="true">&#10024;</i><span><b>Your fair guide</b><small>Ask anything, get walked anywhere</small></span></button>
+      <button type="button" data-do="watch" hidden><i aria-hidden="true">&#9654;</i><span><b>Watch the live talks</b><small>A window beside you, or full screen</small></span></button>
       <button type="button" data-do="people"><i aria-hidden="true">&#9787;</i><span><b>Who&rsquo;s here</b><small>Meet visitors and authors</small></span></button>
       <button type="button" data-do="creator"><i aria-hidden="true">&#10022;</i><span><b>Your book at the fair</b><small>Design a cover, place it on the pedestal</small></span></button>
       <button type="button" data-do="photo"><i aria-hidden="true">&#9673;</i><span><b>Take a photo</b><small>A framed picture of where you stand</small></span></button>
@@ -346,6 +348,7 @@
         <a class="btn btn--gold btn--lg" data-event-register href="https://forms.gle/DCKC79M3vk3nCYMb8" target="_blank" rel="noopener">Register free</a>
         <button class="btn btn--ghost" type="button" data-ics>Add to my calendar</button>
         <button class="btn btn--ghost" type="button" data-seat>Take a seat by the stage</button>
+        <button class="btn btn--gold" type="button" data-do="watch" hidden>&#9679; Watch the live talks</button>
       </div>
       <h3 class="bi__h" data-event="lineup-title">Speaking live</h3>
       <ul class="ev__lineup" id="ev-lineup"></ul>
@@ -444,6 +447,58 @@
       <button class="chip" type="button" id="tour-stop">End tour</button>
     </div>
   </div>
+
+
+  <!-- The fair guide -->
+  <div class="guide" id="guide">
+    <div class="guide__tip" id="guide-tip" hidden>
+      <div id="guide-tip-text"></div>
+      <span class="guide__tip-more">Ask the guide &rsaquo;</span>
+      <button class="guide__tip-x" type="button" data-guide-tip-close aria-label="Dismiss">&times;</button>
+    </div>
+    <section class="guide__panel" id="guide-panel" role="dialog" aria-label="Your fair guide" hidden>
+      <header class="guide__head">
+        <span class="guide__avatar" aria-hidden="true"><img src="assets/img/brand/logo-512.png" alt=""></span>
+        <div class="guide__who"><b>Your fair guide</b><small id="guide-mode">Ask me anything about the fair</small></div>
+        <button class="icon-btn" type="button" id="guide-voice" aria-pressed="false" aria-label="Read answers aloud">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 9a4 4 0 010 6M18.5 6.5a7.5 7.5 0 010 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" type="button" id="guide-quiet" aria-pressed="false" aria-label="Quiet: no tips while I explore">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 20.5a2.2 2.2 0 004 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="guide__mute" d="M4 4l16 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" type="button" id="guide-min" aria-label="Close the guide">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="guide__log" id="guide-log" aria-live="polite"></div>
+      <div class="guide__chips" id="guide-chips"></div>
+      <form class="guide__form" id="guide-form" autocomplete="off">
+        <label class="sr-only" for="guide-input">Ask the guide</label>
+        <input id="guide-input" type="text" maxlength="400" placeholder="Ask about authors, books, the live event&hellip;">
+        <button class="guide__send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z" fill="currentColor"/></svg></button>
+      </form>
+      <button class="guide__away" id="guide-away" type="button">Put the guide away (bring it back from the &middot;&middot;&middot; menu)</button>
+    </section>
+    <button class="guide__orb" id="guide-orb" type="button" aria-label="Ask your fair guide" aria-expanded="false" aria-controls="guide-panel">
+      <span class="guide__halo" aria-hidden="true"></span>
+      <img src="assets/img/brand/logo-512.png" alt="">
+      <span class="guide__label">Guide</span>
+    </button>
+  </div>
+
+  <!-- The live talks, beside you as you explore -->
+  <section class="live" id="live" aria-label="Live stream of the event" data-mode="dock" hidden>
+    <header class="live__bar">
+      <span class="live__badge"><i aria-hidden="true"></i>Live</span>
+      <b class="live__title" data-event="name">Speak Your Book</b>
+      <a class="live__zoom" id="live-zoom" href="#" target="_blank" rel="noopener" hidden>Join on Zoom</a>
+      <button class="icon-btn" type="button" data-live="theatre" aria-label="Make it bigger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn" type="button" data-live="full" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 10V8h3M16 14v2h-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn" type="button" data-live="min" aria-label="Minimise"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn" type="button" data-live="close" aria-label="Close the stream"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </header>
+    <div class="live__video"><iframe id="live-frame" title="Speak Your Book live stream" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+  </section>
 
   <!-- Reactions (desktop) -->
   <div class="emote-bar emotes" id="emote-bar" aria-label="Send a reaction" hidden></div>
