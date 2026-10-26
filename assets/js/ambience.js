@@ -17,7 +17,7 @@ const THEMES = {
   'everything-happens-for-you': 'sand',
   'healing-unraveled': 'birds',
   'life-is-happening-now': 'leaves',
-  'truly-yours-life': 'dawn',
+  'truly-yours-life': 'water',
   'curiously-certain': 'plucks',
   'how-to-build-yourself-up': 'dawn'
 };

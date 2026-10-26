@@ -922,31 +922,6 @@ export function createProps(ctx) {
     }
   };
 
-  function sunflowerTexture() {
-    const S = 256, c = makeCanvas(S, S), x = c.getContext('2d'), cx = S / 2;
-    for (let ring = 0; ring < 2; ring++) {
-      for (let i = 0; i < 22; i++) {
-        x.save();
-        x.translate(cx, cx);
-        x.rotate((i / 22) * Math.PI * 2 + ring * 0.14);
-        x.fillStyle = ring ? '#ffd166' : '#f2a91c';
-        x.beginPath();
-        x.moveTo(0, -34);
-        x.quadraticCurveTo(15, -80, 0, -124 + ring * 8);
-        x.quadraticCurveTo(-15, -80, 0, -34);
-        x.fill();
-        x.restore();
-      }
-    }
-    x.fillStyle = '#4a2a0c';
-    x.beginPath();
-    x.arc(cx, cx, 44, 0, Math.PI * 2);
-    x.fill();
-    x.fillStyle = 'rgba(255,209,102,.55)';
-    for (let i = 0; i < 90; i++) { const r = Math.sqrt(i / 90) * 40, a = i * 2.4; x.beginPath(); x.arc(cx + Math.cos(a) * r, cx + Math.sin(a) * r, 1.8, 0, Math.PI * 2); x.fill(); }
-    return toTexture(c);
-  }
-
   Object.assign(builders, {
     // A sunlit tree in a little park, glowing footsteps leading to it, and a sign that says NOW
     'life-is-happening-now'() {
@@ -996,41 +971,63 @@ export function createProps(ctx) {
       };
     },
 
-    // Sunflowers turning toward a warm light, and a letter signed "Truly yours" floating above
+    // Mind, Body and Spirit as three rings of light that drift apart and come back into line as
+    // one, over a sparkling sea as on the cover, with a letter from Life floating above:
+    // resilience keeps us strong, coherence brings us home
     'truly-yours-life'() {
       const g = new THREE.Group();
-      g.add(plinth(0.5));
-      const stemMat = new THREE.MeshStandardMaterial({ color: 0x3f7d3a, roughness: 0.8 });
-      const headMat = new THREE.MeshStandardMaterial({ map: sunflowerTexture(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, emissive: 0xffffff, emissiveIntensity: 0.35, roughness: 0.7 });
-      headMat.emissiveMap = headMat.map;
-      const heads = [];
-      [[-0.2, 0.95, 0.05], [0.05, 1.15, -0.08], [0.25, 0.85, 0.08]].forEach(([x, h, z], i) => {
-        const stem = cyl(0.012, 0.016, h, stemMat, 8);
-        stem.position.set(x, 0.08 + h / 2, z);
-        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 6), stemMat);
-        leaf.scale.set(1.6, 0.25, 0.7);
-        leaf.position.set(x + 0.05, 0.08 + h * 0.45, z);
-        leaf.rotation.z = -0.4;
-        const head = new THREE.Mesh(new THREE.CircleGeometry(0.16 - i * 0.01, 32), headMat);
-        head.position.set(x, 0.08 + h, z + 0.01);
-        head.rotation.x = -0.25;
-        g.add(stem, leaf, head);
-        heads.push(head);
+      g.add(plinth(0.55));
+      const water = waterMaterial(0x4a6878, 0xfff2d6, false);
+      const sea = new THREE.Mesh(new THREE.CircleGeometry(0.5, 48), water);
+      sea.rotation.x = -Math.PI / 2;
+      sea.position.y = 0.085;
+      g.add(sea, sparks({ n: 36, w: 0.7, d: 0.7, y: 0.1, h: 0.04, color: 0xffffff, k: 2.6, size: 0.02, rise: 0.02 }));
+      const label = (text, color) => {
+        const c = makeCanvas(512, 128), x = c.getContext('2d');
+        x.fillStyle = color;
+        x.shadowColor = 'rgba(0,0,0,.6)';
+        x.shadowBlur = 8;
+        x.font = `800 64px ${SANS}`;
+        x.textAlign = 'center';
+        x.textBaseline = 'middle';
+        x.fillText(text.split('').join(String.fromCharCode(8202)), 256, 68);
+        return new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.09), new THREE.MeshBasicMaterial({ map: toTexture(c), transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+      };
+      const hub = new THREE.Group();
+      hub.position.y = 1.05;
+      // each name sits at its own place on its ring, so the three never cover each other
+      const rings = [[0xf2c46d, 'MIND', 0.36, 0], [0x72c7cc, 'BODY', 0.3, -0.8], [0xe88aa6, 'SPIRIT', 0.24, 0.8]].map(([col, name, r, at], i) => {
+        const pivot = new THREE.Group();
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.014, 10, 80), new THREE.MeshBasicMaterial({ color: hdr(col, 1.7) }));
+        const tag = label(name, '#' + new THREE.Color(col).getHexString());
+        tag.position.set(Math.sin(at) * (r + 0.07), Math.cos(at) * (r + 0.07), 0);
+        pivot.add(ring, tag);
+        hub.add(pivot);
+        return { pivot, ph: i * 2.1 };
       });
-      const light = sprite(0xffd98a, 1.4, 0.6);
-      light.position.set(0, 1.75, 0.2);
-      const letter = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.4), new THREE.MeshStandardMaterial({ map: paperTexture(['Truly yours,', 'Life'], false), side: THREE.DoubleSide, roughness: 0.8, emissive: 0xffffff, emissiveIntensity: 0.25 }));
+      const home = sprite(0xfff0c8, 1.1, 0);
+      hub.add(home);
+      const letter = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.35), new THREE.MeshStandardMaterial({ map: paperTexture(['Truly yours,', 'Life'], false), side: THREE.DoubleSide, roughness: 0.8, emissive: 0xffffff, emissiveIntensity: 0.25 }));
       letter.material.emissiveMap = letter.material.map;
-      letter.position.set(0.02, 1.6, 0.1);
-      g.add(light, letter, sparks({ n: 36, w: 0.8, d: 0.6, y: 0.6, h: 1.4, color: 0xffd166, k: 2.2, size: 0.028, rise: 0.7 }));
+      letter.position.set(0, 1.78, 0.05);
+      g.add(hub, letter, sparks({ n: 28, w: 0.8, d: 0.6, y: 0.5, h: 1.5, color: 0xffe2a8, k: 2, size: 0.026, rise: 0.6 }));
       return {
         group: g,
         update(t) {
-          letter.position.y = 1.6 + Math.sin(t * 0.9) * 0.05;
-          letter.rotation.y = Math.sin(t * 0.4) * 0.35;
-          heads.forEach((h, i) => { h.rotation.y = Math.sin(t * 0.3 + i) * 0.15; });
+          water.uniforms.uTime.value = t;
+          // apart, each pulled its own way; then, slowly, all three in line as one
+          const k = (Math.sin(t * 0.32 - 1.2) + 1) / 2;
+          const together = k * k * (3 - 2 * k);
+          const apart = 1 - together;
+          rings.forEach((r) => {
+            r.pivot.rotation.set(Math.sin(t * 0.55 + r.ph) * 1.1 * apart, Math.cos(t * 0.42 + r.ph) * 1.3 * apart, Math.sin(t * 0.3 + r.ph) * 0.6 * apart);
+            r.pivot.position.set(Math.sin(r.ph) * 0.14 * apart, Math.cos(r.ph) * 0.1 * apart, 0);
+          });
+          home.material.opacity = 0.7 * Math.pow(together, 3);
+          letter.position.y = 1.78 + Math.sin(t * 0.9) * 0.04;
+          letter.rotation.y = Math.sin(t * 0.4) * 0.3;
         },
-        colliders: [[0, 0, 0.5]]
+        colliders: [[0, 0, 0.55]]
       };
     },
 

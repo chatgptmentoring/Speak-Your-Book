@@ -348,29 +348,29 @@ window.FAIR_BOOKS = [
   {
     slug: 'truly-yours-life',
     status: 'coming-soon',
-    coverPending: true,
     title: 'Truly Yours, Life',
-    subtitle: 'A journey of faith through war, exile and new beginnings',
+    subtitle: 'A Journey Through Expectation, Rewiring, and Coherence',
     author: 'Yevheniya Shalimova',
-    credentials: '',
-    tags: ['Memoir', 'Faith', 'Resilience'],
-    aisles: ['story', 'spirit'],
-    hook: 'Through every border and every loss, faith held.',
+    credentials: 'PCC',
+    tags: ['Memoir', 'Personal development', 'Leadership'],
+    aisles: ['stories', 'purpose'],
+    hook: 'Resilience keeps us strong, but Coherence brings us home.',
     description: [
-      'From Soviet Russia to Ukraine, through divorce, war and life as a refugee, Yevheniya Shalimova has lived through more than most.',
-      'Through all of it, faith in God never wavered. Truly Yours, Life is the story of finally living what the soul is calling for.'
+      'How much of the life you are living was consciously chosen by you, and how much was inherited, expected, or merely survived? Truly Yours, Life is a memoir-meets-methodology that guides high-achievers, perfectionists and burnt-out leaders out of the exhaustion of constant performance.',
+      'Raised on a top-secret Soviet military base, Yevheniya Shalimova learned early that love and approval had to be earned through flawless execution. For decades she lived as the ultimate “shadow translator”, amplifying the brilliance of international leaders and making quiet compromises to keep the peace. It took escaping the 2022 war in Ukraine, surviving a freezing 40-foot shipping container and a total physical collapse as a refugee in Norway for her to stop performing and start living.',
+      'Blending a cinematic memoir with behavioural neuroscience, and framed as a series of letters written by Life to the reader, the book unveils the origin of the Coherence Architecture and The Shalimova Method®: how to stop making quiet compromises, rewire the brain’s trauma responses, and bring Mind, Body and Spirit home into Coherence.'
     ],
     inside: [
-      'From Soviet Russia to Ukraine and beyond',
-      'Divorce, war and starting again as a refugee',
-      'Faith that holds through everything',
-      'Living what your soul is calling for'
+      'The danger of “quiet compromises”',
+      'Resilience vs. Coherence',
+      'The “Helper Syndrome” in leadership',
+      'Doing vs. Being: from performance to inner peace'
     ],
-    forWho: 'Anyone starting over, holding on to faith, or answering their soul’s calling.',
+    forWho: 'High-achievers, perfectionists and leaders who look successful on the outside but feel quietly suffocated on the inside.',
     amazon: null,
-    cover: { w: 1000, h: 1500 },
-    colors: { spine: '#1d3557', spineText: '#ffe8a3', glow: '#ffd166' },
-    oracle: 'Every road you have walked has led you here. Your soul knows the way.'
+    cover: { w: 1024, h: 1536 },
+    colors: { spine: '#2c2a28', spineText: '#e8c47a', glow: '#f3d38c' },
+    oracle: 'Resilience kept you strong. Now let Coherence bring you home.'
   },
   {
     slug: 'curiously-certain',
@@ -445,13 +445,13 @@ window.FAIR_QUIZ = [
     q: 'What is your heart asking for right now?',
     weight: 5,
     options: [
-      { label: 'Peace after heartbreak or loss', books: ['finding-love-in-the-mirror', 'everything-happens-for-you', 'truly-yours-life', 'how-to-build-yourself-up'] },
-      { label: 'To come home to myself', books: ['journey-to-empowerment', 'the-invisible-midlife-woman', 'finding-love-in-the-mirror', 'life-is-happening-now'] },
+      { label: 'Peace after heartbreak or loss', books: ['finding-love-in-the-mirror', 'everything-happens-for-you', 'how-to-build-yourself-up'] },
+      { label: 'To come home to myself', books: ['journey-to-empowerment', 'the-invisible-midlife-woman', 'finding-love-in-the-mirror', 'life-is-happening-now', 'truly-yours-life'] },
       { label: 'A clear next chapter', books: ['clarity-before-momentum', 'curiously-certain', 'everything-happens-for-you'] },
       { label: 'Healing for body and mind', books: ['food-isnt-the-problem', 'healing-unraveled', 'conscious-integrative-therapy', 'life-is-happening-now'] },
       { label: 'Faith and courage to begin again', books: ['truly-yours-life', 'curiously-certain', 'everything-happens-for-you', 'how-to-build-yourself-up'] },
       { label: 'Strong, happy children', books: ['teen-mental-health', 'more-than-a-game', 'when-the-blueprint-burned'] },
-      { label: 'A story to get lost in', books: ['prince-and-the-prodigal', 'when-the-blueprint-burned', 'truly-yours-life', 'finding-love-in-the-mirror'] }
+      { label: 'A story to get lost in', books: ['prince-and-the-prodigal', 'when-the-blueprint-burned', 'finding-love-in-the-mirror'] }
     ]
   },
   {
@@ -460,8 +460,8 @@ window.FAIR_QUIZ = [
     options: [
       { label: 'For me', books: ['finding-love-in-the-mirror', 'the-invisible-midlife-woman', 'food-isnt-the-problem', 'journey-to-empowerment', 'everything-happens-for-you', 'healing-unraveled', 'life-is-happening-now', 'truly-yours-life', 'curiously-certain', 'clarity-before-momentum', 'how-to-build-yourself-up'] },
       { label: 'For my family', books: ['teen-mental-health', 'more-than-a-game', 'when-the-blueprint-burned'] },
-      { label: 'For my work and the people I help', books: ['clarity-before-momentum', 'conscious-integrative-therapy', 'healing-unraveled', 'teen-mental-health', 'more-than-a-game'] },
-      { label: 'A gift for someone I love', books: ['prince-and-the-prodigal', 'finding-love-in-the-mirror', 'truly-yours-life', 'everything-happens-for-you', 'curiously-certain', 'how-to-build-yourself-up'] }
+      { label: 'For my work and the people I help', books: ['clarity-before-momentum', 'conscious-integrative-therapy', 'healing-unraveled', 'teen-mental-health', 'more-than-a-game', 'truly-yours-life'] },
+      { label: 'A gift for someone I love', books: ['prince-and-the-prodigal', 'finding-love-in-the-mirror', 'everything-happens-for-you', 'curiously-certain', 'how-to-build-yourself-up'] }
     ]
   },
   {
@@ -637,6 +637,7 @@ window.FAIR_AUTHOR_EXTRAS = {
   },
   'yevheniya-shalimova': {
     photo: 'assets/img/authors/yevheniya-shalimova.webp',
+    bio: 'A globally recognised Executive Coach, credentialed PCC with the International Coaching Federation, and founder of The Shalimova Method®. Yevheniya draws on more than 2,300 coaching hours with leaders across 35 countries and advanced studies at Harvard, Yale and the Brain Academy, and is an Executive Contributor to Brainz Magazine.',
     inbox: 'evgenia7shalimova@gmail.com',
     website: 'https://theshalimovamethod.com/',
     websiteByLCC: true,
@@ -680,7 +681,7 @@ window.FAIR_STANDS = {
   'everything-happens-for-you': 'An hourglass of glowing sand: every grain falls for a reason.',
   'healing-unraveled': 'A golden birdcage with its door open and a radiant diamond inside.',
   'life-is-happening-now': 'A sunlit tree in a little park, a winding path of glowing footsteps leading to it, and a sign that says NOW.',
-  'truly-yours-life': 'Sunflowers turning toward a warm light, with a letter signed “Truly yours” floating above them.',
+  'truly-yours-life': 'Three rings of light, Mind, Body and Spirit, drift apart and then come back into line as one glowing circle above a sparkling sea, while a letter signed “Truly yours, Life” floats overhead: resilience keeps us strong, coherence brings us home.',
   'curiously-certain': 'A little café table with two steaming cups of coffee, set for a friendly conversation.',
   'how-to-build-yourself-up': 'A broken wall whose stones climb into a staircase of light, rising towards a wing of colourful feathers: pain turned into a way up.'
 };
