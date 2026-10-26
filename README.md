@@ -11,7 +11,7 @@ event and discover how to speak their own book (free discovery call).
 - **The entrance**: the Life Coach Code crest crowns the arch, with a gold medallion, laurels, a
   turning ring of text, a sunburst and searchlights. The logo is also inlaid in the plaza floor and
   flies on flags from the lamp posts. Two easels carry the poster for the live event.
-- **A candlelit hall of 12 booths** (9 published books and 3 coming soon). Each booth has a poster,
+- **A candlelit hall of 15 booths** (9 published books and 6 coming soon). Each booth has a poster,
   the book on a pedestal, and a hand-made piece that carries the spirit of the book. *Food Isn't
   the Problem* has its 3-Step Path: Name it, Claim it, Reframe it.
 - **Meet the authors**: beside every booth the author waits as a hologram. Press `E` to meet

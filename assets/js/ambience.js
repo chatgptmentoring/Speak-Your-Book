@@ -15,7 +15,10 @@ const THEMES = {
   'journey-to-empowerment': 'leaves',
   'when-the-blueprint-burned': 'fire',
   'everything-happens-for-you': 'sand',
-  'healing-unraveled': 'birds'
+  'healing-unraveled': 'birds',
+  'life-is-happening-now': 'leaves',
+  'truly-yours-life': 'dawn',
+  'curiously-certain': 'plucks'
 };
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const rnd = (a, b) => a + Math.random() * (b - a);

@@ -115,7 +115,8 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
     } else if (sched.length) {
       reply += '\n\n**The programme:**\n' + sched.map((s) => `- **${s.time}** · ${authorById[s.author] ? authorById[s.author].displayName : s.author}${s.title ? `: *${s.title}*` : ''}`).join('\n');
     }
-    const actions = [{ type: 'link', label: 'Register free', url: EVENT.register }, { type: 'event' }];
+    const zoom = EVENT.stream && EVENT.stream.zoom;
+    const actions = [{ type: 'link', label: 'Register free', url: EVENT.register }, ...(zoom ? [{ type: 'link', label: 'Join on Zoom', url: zoom }] : []), { type: 'event' }];
     if (act.canWatch()) actions.unshift({ type: 'watch' });
     return { reply, actions };
   }
@@ -126,7 +127,7 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
   function watchAnswer() {
     const S = (EVENT && EVENT.stream) || {};
     if (act.canWatch()) return { reply: `You can watch the talks right here: the live window stays beside you while you walk the fair, or goes full screen.${S.zoom ? ' To take part and ask questions, join on Zoom.' : ''}`, actions: [{ type: 'watch' }, ...(S.zoom ? [{ type: 'link', label: 'Join on Zoom', url: S.zoom }] : [])] };
-    return { reply: `The talks happen live on Zoom${upcoming() ? ` on **${eventInfo.dateLong()}**` : ''}. Register free to get the link.${upcoming() ? ' On the day, the live stream can also play right here in the fair.' : ''}`, actions: [{ type: 'link', label: 'Register free', url: EVENT ? EVENT.register : LINKS.discovery }] };
+    return { reply: `The talks happen live on Zoom${upcoming() ? ` on **${eventInfo.dateLong()}**` : ''}. ${S.zoom ? 'The **Join on Zoom** button opens the call in a new window, or in the Zoom app on your phone.' : 'Register free to get the link.'}`, actions: [...(S.zoom ? [{ type: 'link', label: 'Join on Zoom', url: S.zoom }] : []), { type: 'link', label: 'Register free', url: EVENT ? EVENT.register : LINKS.discovery }] };
   }
   function sybAnswer() {
     return {
@@ -137,8 +138,9 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
   function authorAnswer(a) {
     const books = a.books.map((s) => bySlug[s]);
     let reply = `**${a.displayName}**${a.credentials ? `, ${a.credentials}` : ''}`;
-    reply += a.bio ? `\n\n${a.bio}` : `\n\nAuthor of ${books.map((b) => `*${b.title}*`).join(', ')}.`;
-    if (a.bio) reply += `\n\n**At the fair:** ${books.map((b) => `*${b.title}*`).join(', ')}.`;
+    if (a.bio) reply += `\n\n${(a.bio.match(/^.*?[.!?](\s|$)/) || [a.bio])[0].trim()}`;
+    reply += `\n\n**At the fair:** ${books.map((b) => `*${b.title}*`).join(', ')}.`;
+    if (a.websiteByLCC) reply += ' ✦ Website made with Life Coach Code.';
     if (upcoming()) reply += ` Speaking live at ${EVENT.name} on ${eventInfo.dateLong()}.`;
     const l = authorLinks(a);
     if (l) reply += `\n\n${l}`;
@@ -149,9 +151,8 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
   function bookAnswer(b, standFirst = false) {
     const a = authorOf[b.slug];
     const stand = STANDS[b.slug];
-    let reply = standFirst && stand ? `**At this booth:** ${stand}\n\n${bookLine(b)}. *${b.hook}*` : `${bookLine(b)}\n\n*${b.hook}*\n\n${b.description[0]}`;
+    let reply = standFirst && stand ? `**At this booth:** ${stand}\n\n${bookLine(b)}. *${b.hook}*` : `${bookLine(b)}\n\n*${b.hook}*`;
     if (!standFirst && stand) reply += `\n\n**At the booth:** ${stand}`;
-    if (standFirst) reply += `\n\n${b.description[0]}`;
     const actions = [{ type: 'goto', place: place(b.slug) }, { type: 'book', slug: b.slug }];
     if (b.amazon) actions.push({ type: 'link', label: `Buy on ${b.amazon.store}`, url: b.amazon.url });
     else if (a) actions.push({ type: 'author', id: a.id });
@@ -220,7 +221,7 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
   function knowledge() {
     const st = evStatus();
     return JSON.stringify({
-      fair: 'The Virtual Book Fair: a walkable 3D book fair floating in space, hosted by Life Coach Code. 12 booths, each with a book, a hologram of its author and a themed piece. Visitors walk with W A S D or a joystick, press E to interact, M for the map, T for a guided tour, P for a photo. Every booth opened stamps the Fair Passport.',
+      fair: `The Virtual Book Fair: a walkable 3D book fair floating in space, hosted by Life Coach Code. ${BOOKS.length} booths, each with a book, a hologram of its author and a themed piece. Visitors walk with W A S D or a joystick, press E to interact, M for the map, T for a guided tour, P for a photo. Every booth opened stamps the Fair Passport.`,
       host: { name: 'Life Coach Code', about: 'A home for coaches and seekers, built on four pillars: Spirit, Mind, Body and Heart. Helps coaches get seen, get heard and get published.', solutions: ['Publishing: Speak Your Book', 'Visibility: features and media', 'Recognition: awards and honours', 'Stages: summits and events'], links: LINKS },
       speakYourBook: ['Book a free discovery call', 'Speak your story in your own voice', 'Watch it become a book', 'Take your place at the fair'],
       event: EVENT && { name: EVENT.name, date: eventInfo.dateLong(), startTime: eventInfo.time() || 'not announced yet', where: EVENT.where, price: EVENT.price, register: EVENT.register, about: EVENT.about, status: st && st.count, schedule: EVENT.schedule || [], streamInTheFair: act.canWatch() },

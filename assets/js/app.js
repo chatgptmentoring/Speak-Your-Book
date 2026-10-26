@@ -139,11 +139,21 @@ const EventInfo = (() => {
       return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Life Coach Code//Virtual Book Fair//EN', 'BEGIN:VEVENT',
         `UID:${EVENT.date}-speak-your-book@lifecoachcode.com`, `DTSTAMP:${stamp}`, ...when,
         `SUMMARY:${escI(`${EVENT.name} (${EVENT.where})`)}`,
-        `DESCRIPTION:${escI(`${EVENT.about}\nRegister free: ${EVENT.register}\nThe Virtual Book Fair: ${location.origin + location.pathname}`)}`,
+        ...(EVENT.stream && EVENT.stream.zoom ? [`LOCATION:${escI(EVENT.stream.zoom)}`] : []),
+        `DESCRIPTION:${escI(`${EVENT.about}\n${EVENT.stream && EVENT.stream.zoom ? `Join on Zoom: ${EVENT.stream.zoom}\n` : ''}Register free: ${EVENT.register}\nThe Virtual Book Fair: ${location.origin + location.pathname}`)}`,
         `URL:${EVENT.register}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
     }
   };
 })();
+const ZOOM = EVENT && EVENT.stream && EVENT.stream.zoom;
+const ZOOM_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="3" fill="currentColor"/><path d="M16.5 10.5l5-3v9l-5-3z" fill="currentColor"/></svg>';
+const isEventDay = () => !!EventInfo && ['today', 'soon', 'live'].includes(EventInfo.status().phase);
+function eventCta() {
+  if (!EventInfo || !EventInfo.upcoming()) return `<a class="btn btn--gold" href="${LINKS.discovery}" target="_blank" rel="noopener">Speak your own book</a>`;
+  const join = ZOOM ? `<a class="btn ${isEventDay() ? 'btn--gold' : 'btn--ghost'} btn--zoom" data-zoom href="${esc(ZOOM)}" target="_blank" rel="noopener">${ZOOM_ICON} Join on Zoom</a>` : '';
+  const reg = `<a class="btn ${isEventDay() ? 'btn--ghost' : 'btn--gold'}" data-event-register href="${esc(EVENT.register)}" target="_blank" rel="noopener">Register free</a>`;
+  return isEventDay() ? join + reg : reg + join;
+}
 const eventLine = () => (EventInfo && EventInfo.upcoming() ? `Speaking live at ${EVENT.name} · ${EventInfo.dateLong()}, free on Zoom` : `Spoke live at ${EVENT ? EVENT.name : 'the fair'}`);
 
 /* =========================================================================
@@ -631,51 +641,68 @@ const Detail = (() => {
       .map((s) => `<a href="https://www.amazon.${s.tld}/dp/${b.amazon.asin}" target="_blank" rel="noopener">${esc(s.label)}</a>`).join('');
   }
 
+  // Visual first: a short header, the actions, then swipeable cards. The long description waits behind "Read more".
   function html(b) {
     const soon = isSoon(b);
     const more = BOOKS.filter((x) => x.author === b.author && x !== b);
+    const au = authorOfSlug[b.slug];
+    const stand = (window.FAIR_STANDS || {})[b.slug];
+    const first = (t) => (String(t).match(/^.*?[.!?](\s|$)/) || [t])[0].trim();
+    const slides = [`<div class="slide slide--hook"><span class="slide__k">The heart of it</span><blockquote>${esc(b.hook)}</blockquote></div>`];
+    slides.push(`<div class="slide"><span class="slide__k">Inside</span><ol class="slide__list">${b.inside.map((x, i) => `<li><i>${i + 1}</i><span>${esc(x)}</span></li>`).join('')}</ol></div>`);
+    if (b.steps) slides.push(`<div class="slide"><span class="slide__k">${esc(b.steps.title)}</span><ol class="slide__steps">${b.steps.items.map((st, i) => `<li><i>${i + 1}</i><b>${esc(st.name)}</b><small>${esc(first(st.text))}</small></li>`).join('')}</ol></div>`);
+    slides.push(`<div class="slide slide--for"><span class="slide__k">Perfect for</span><p>${esc(b.forWho)}</p></div>`);
+    if (stand) slides.push(`<div class="slide slide--stand"><span class="slide__k">At the booth</span><p>${esc(stand)}</p></div>`);
+    (b.testimonials || []).forEach((t) => slides.push(`<div class="slide slide--hook"><span class="slide__k">A reader says</span><blockquote>${esc(t.quote)}</blockquote>${t.name ? `<cite>${esc(t.name)}</cite>` : ''}</div>`));
     let h = `<img class="detail__cover" src="${coverSrc(b, 800)}" alt="Cover of ${esc(b.title)}">
-      <div class="bi__meta">${soon ? '<span class="badge--soon">Coming soon</span>' : ''}${b.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+      <div class="bi__meta">${soon ? `<span class="badge--soon">${b.workingTitle ? 'Working title · coming soon' : 'Coming soon'}</span>` : ''}${b.coverPending ? '<span class="tag">Cover reveal soon</span>' : ''}${b.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
       <h2 class="bi__title" id="detail-title">${esc(b.title)}</h2>
       <p class="bi__subtitle">${esc(b.subtitle)}</p>
-      <p class="bi__author">by <b>${esc(authorName(b))}</b>${b.credentials ? ', ' + esc(b.credentials) : ''}</p>
       <div class="bi__look" data-look>
         <button class="icon-btn" type="button" data-page="-1" aria-label="Previous pages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <span><b>Look inside</b><small data-page-label>Turn the pages here, or click the book</small></span>
+        <span><b>Look inside</b><small data-page-label>Turn the pages, or click the book</small></span>
         <button class="icon-btn" type="button" data-page="1" aria-label="Next pages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
-      <blockquote class="bi__hook">${esc(b.hook)}</blockquote>
-      ${b.description.map((p) => `<p class="bi__desc">${esc(p)}</p>`).join('')}
-      <h3 class="bi__h">Inside you’ll find</h3>
-      <ul class="bi__inside">${b.inside.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-      ${b.steps ? `<h3 class="bi__h">${esc(b.steps.title)}</h3><ol class="bi__steps">${b.steps.items.map((st, i) => `<li><span>${i + 1}</span><div><b>${esc(st.name)}</b><p>${esc(st.text)}</p></div></li>`).join('')}</ol>` : ''}
-      <p class="bi__for"><span>Perfect for</span>${esc(b.forWho)}</p>`;
-    if (b.testimonials && b.testimonials.length) {
-      h += `<h3 class="bi__h">What readers say</h3><ul class="bi__quotes">${b.testimonials.map((t) => `<li><blockquote>${esc(t.quote)}</blockquote>${t.name ? `<cite>${esc(t.name)}</cite>` : ''}</li>`).join('')}</ul>`;
-    }
-    const au = authorOfSlug[b.slug];
-    if (au) {
-      const here = People.isOnline(au.id);
-      h += `<div class="bi__meet${here ? ' is-online' : ''}">
-        <span class="au__mono au__mono--sm" aria-hidden="true">${esc(initials(au.name))}</span>
-        <span class="bi__meet-text"><b>Meet ${esc(au.displayName)}</b><small>${here ? '● At the fair right now' : esc(eventLine())}</small></span>
-        <button class="btn btn--ghost btn--sm" type="button" data-author="${au.id}">Meet the author</button></div>`;
-    }
-    if (soon) {
-      h += `<div class="bi__soon"><p><b>On its way to the shelves.</b>This book is coming soon. While you wait: is there a book inside you, too? Life Coach Code helps coaches speak their book into being.</p>
-        <div class="bi__buy"><a class="btn btn--gold btn--lg" href="${LINKS.discovery}" target="_blank" rel="noopener">Book a free discovery call ${ARROW}</a>
-        <button class="btn btn--ghost btn--sm" type="button" data-share>Share this booth</button></div></div>`;
-    } else {
-      h += `<div class="bi__buy"><a class="btn btn--gold btn--lg" href="${esc(b.amazon.url)}" target="_blank" rel="noopener">Buy on ${esc(b.amazon.store)} ${ARROW}</a>
-        <button class="btn btn--ghost btn--sm" type="button" data-share>Share this book</button></div>
-        <p class="bi__stores"><span>Shopping from elsewhere?</span>${storeLinks(b)}</p>`;
-    }
+      <div class="bi__buy">${soon
+        ? `<a class="btn btn--gold" href="${LINKS.discovery}" target="_blank" rel="noopener">Your book could be next ${ARROW}</a>`
+        : `<a class="btn btn--gold" href="${esc(b.amazon.url)}" target="_blank" rel="noopener">Buy on ${esc(b.amazon.store)} ${ARROW}</a>`}
+        <button class="btn btn--ghost btn--sm" type="button" data-share>Share</button></div>
+      <div class="slider" data-slider>
+        <div class="slider__track">${slides.join('')}</div>
+        <div class="slider__dots">${slides.map((_, i) => `<button type="button" aria-label="Card ${i + 1} of ${slides.length}"${i ? '' : ' aria-current="true"'} data-dot="${i}"></button>`).join('')}</div>
+      </div>`;
+    if (au) h += authorCard(au);
+    h += `<details class="bi__more-text"><summary>Read more about this book</summary>${b.description.map((p) => `<p class="bi__desc">${esc(p)}</p>`).join('')}
+      ${soon ? '' : `<p class="bi__stores"><span>Other Amazon stores:</span>${storeLinks(b)}</p>`}</details>`;
     if (more.length) {
       h += `<div class="bi__more"><h3 class="bi__h">More from ${esc(b.author)}</h3><div class="bi__more-list">${more.map((x) =>
         `<button type="button" data-goto="${x.slug}" aria-label="Visit the booth for ${esc(x.title)}"><img src="${coverSrc(x, 480)}" alt="" loading="lazy"></button>`).join('')}</div></div>`;
     }
-    h += '<p class="bi__stamp"><i aria-hidden="true">✓</i> Passport stamp collected at this booth</p>';
+    h += '<p class="bi__stamp"><i aria-hidden="true">✓</i> Passport stamp collected</p>';
     return h;
+  }
+  function authorCard(au) {
+    const here = People.isOnline(au.id);
+    return `<div class="bi__meet${here ? ' is-online' : ''}">
+      <span class="au__mono au__mono--sm" aria-hidden="true">${esc(initials(au.name))}</span>
+      <span class="bi__meet-text"><b>${esc(au.displayName)}</b><small>${here ? '● At the fair right now' : EventInfo && EventInfo.upcoming() ? `Speaking live · ${esc(EventInfo.dayShort())}` : 'Author'}</small></span>
+      <button class="btn btn--ghost btn--sm" type="button" data-author="${au.id}">Meet</button>
+      ${au.inbox ? `<button class="icon-btn" type="button" data-author-msg="${au.id}" aria-label="Send ${esc(au.displayName)} a message">✉</button>` : ''}</div>`;
+  }
+  function bindSlider(root) {
+    const sl = $('[data-slider]', root);
+    if (!sl) return;
+    const track = $('.slider__track', sl), dots = $$('[data-dot]', sl);
+    const sync = () => {
+      const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth * 0.86));
+      dots.forEach((d, k) => d.toggleAttribute('aria-current', k === Math.min(i, dots.length - 1)));
+    };
+    track.addEventListener('scroll', () => requestAnimationFrame(sync), { passive: true });
+    dots.forEach((d) => d.addEventListener('click', () => {
+      const k = +d.dataset.dot;
+      const slide = track.children[k];
+      if (slide) track.scrollTo({ left: slide.offsetLeft - track.offsetLeft, behavior: reduceMotion ? 'auto' : 'smooth' });
+    }));
   }
 
   function show(slug) {
@@ -692,6 +719,7 @@ const Detail = (() => {
     if (current === b) return;
     current = b;
     body.innerHTML = html(b);
+    bindSlider(body);
     panel.scrollTop = 0;
     countEl.textContent = `Booth ${pad2(BOOKS.indexOf(b) + 1)} of ${pad2(BOOKS.length)}`;
     if (world) world.focus(slug);
@@ -764,6 +792,8 @@ const Detail = (() => {
       if (pg && world) world.turnPage(+pg.getAttribute('data-page'));
       const au = e.target.closest('[data-author]');
       if (au) AuthorPanel.open(au.getAttribute('data-author'));
+      const am = e.target.closest('[data-author-msg]');
+      if (am) AuthorPanel.open(am.getAttribute('data-author-msg'), { message: true });
     });
     $('#detail-prev').addEventListener('click', () => step(-1));
     $('#detail-next').addEventListener('click', () => step(1));
@@ -1042,7 +1072,7 @@ const EventUI = (() => {
     return {
       countdown: after
         ? { eyebrow: EVENT.name.toUpperCase(), big: 'THANK YOU', label: 'FOR JOINING US LIVE', line: 'Your book could be next', cta: 'FREE DISCOVERY CALL · PRESS E' }
-        : { eyebrow: `${EVENT.name} · ${EVENT.where}`.toUpperCase(), big: st.big, label: st.label, line: `${EventInfo.dateLong()} · ${EVENT.price.toLowerCase()}`, cta: 'REGISTER FREE · PRESS E' },
+        : { eyebrow: `${EVENT.name} · ${EVENT.where}`.toUpperCase(), big: st.big, label: st.label, line: `${EventInfo.dateLong()} · ${EVENT.price.toLowerCase()}`, cta: isEventDay() && ZOOM ? 'JOIN ON ZOOM · PRESS E' : 'REGISTER FREE · PRESS E' },
       lineup: { eyebrow: after ? 'THE AUTHORS OF THE FAIR' : 'SPEAKING LIVE AT THE EVENT', title: 'Meet the authors', names: AUTHORS.map((a) => a.displayName), foot: 'Find each of them at their booth' }
     };
   }
@@ -1084,6 +1114,11 @@ const EventUI = (() => {
       a.href = after ? LINKS.discovery : EVENT.register;
       if (after) a.textContent = 'Book a free discovery call';
     });
+    // the Zoom room: everyone joins from here (a new window, or the Zoom app on phones)
+    const cta = $('[data-event-cta]');
+    if (cta && ZOOM && !after && !$('[data-zoom]', cta)) cta.insertAdjacentHTML('afterbegin', `<a class="btn btn--ghost btn--lg btn--zoom" data-zoom href="${esc(ZOOM)}" target="_blank" rel="noopener">${ZOOM_ICON} Join on Zoom</a>`);
+    $$('[data-zoom]').forEach((z) => { z.hidden = after || !ZOOM; if (ZOOM) z.href = ZOOM; z.classList.toggle('btn--gold', isEventDay()); z.classList.toggle('btn--ghost', !isEventDay()); });
+    if (isEventDay()) setText('pill-sub', 'join on Zoom now');
     $('#event-pill').hidden = after;
     $$('.event-ribbon').forEach((r) => { r.hidden = after; });
     $('#event-pill').classList.toggle('is-live', live);
@@ -1142,19 +1177,26 @@ const AuthorPanel = (() => {
     $('#author-body').innerHTML = `
       <div class="au__head">${a.photo ? `<img class="au__photo" src="${esc(a.photo)}" alt="">` : `<span class="au__mono" aria-hidden="true">${esc(initials(a.name))}</span>`}
         <div><p class="eyebrow">Meet the author</p><h2 class="sheet__title" id="au-name">${esc(a.displayName)}</h2>${a.credentials ? `<p class="au__cred">${esc(a.credentials)}</p>` : ''}</div></div>
-      <p class="au__status${here ? ' is-online' : ''}">${here ? '<i></i>Here at the fair right now' : `<i></i>${esc(eventLine())}`}</p>
-      ${a.bio ? `<p class="au__bio">${esc(a.bio)}</p>` : ''}
+      <div class="au__chips">
+        <span class="au__status${here ? ' is-online' : ''}"><i></i>${here ? 'Here at the fair now' : EventInfo && EventInfo.upcoming() ? `Speaking live · ${esc(EventInfo.dayShort())}` : 'Author at the fair'}</span>
+        ${a.websiteByLCC ? '<span class="au__badge" title="Life Coach Code helped create this website">✦ Website made with Life Coach Code</span>' : ''}
+      </div>
+      ${bioHtml(a)}
       ${a.welcome ? `<blockquote class="bi__hook">${esc(a.welcome)}</blockquote>` : ''}
-      ${authorLinksHtml(a)}
       ${a.voice ? `<p class="au__voice"><span>A welcome from ${esc(a.displayName)}</span><audio controls preload="none" src="${esc(a.voice)}"></audio></p>` : ''}
-      <h3 class="bi__h">${books.length > 1 ? 'Their books at the fair' : 'Their book at the fair'}</h3>
-      <ul class="au__books">${books.map((b) => `<li><button type="button" data-open="${b.slug}"><img src="${coverSrc(b, 480)}" alt="" loading="lazy"><span><b>${esc(b.title)}</b><small>${isSoon(b) ? 'Coming soon' : esc(b.subtitle)}</small></span></button></li>`).join('')}</ul>
+      <ul class="au__shelf">${books.map((b) => `<li><button type="button" data-open="${b.slug}" aria-label="Open ${esc(b.title)}"><img src="${coverSrc(b, 480)}" alt="" loading="lazy"><span>${esc(b.title)}${isSoon(b) ? '<small>Coming soon</small>' : ''}</span></button></li>`).join('')}</ul>
+      ${authorLinksHtml(a)}
       <div class="card__actions">
-        ${EventInfo && EventInfo.upcoming() ? `<a class="btn btn--gold" data-event-register href="${esc(EVENT.register)}" target="_blank" rel="noopener">Register free to meet them live</a>` : `<a class="btn btn--gold" href="${LINKS.discovery}" target="_blank" rel="noopener">Speak your own book</a>`}
+        ${eventCta()}
         ${here ? `<button class="btn btn--ghost" type="button" data-wave="${here.id}">Wave hello 👋</button><button class="btn btn--ghost" type="button" data-go="${here.id}">Walk over</button>` : ''}
         ${inboxOf(a) ? '<button class="btn btn--ghost" type="button" data-msg>Send a message ✉</button>' : ''}
       </div>
       ${inboxOf(a) ? messageForm(a) : ''}`;
+  }
+  function bioHtml(a) {
+    if (!a.bio) return '';
+    const m = a.bio.match(/^(.*?[.!?])\s+(.+)$/);
+    return m ? `<details class="au__bio"><summary>${esc(m[1])}</summary><p>${esc(m[2])}</p></details>` : `<p class="au__bio">${esc(a.bio)}</p>`;
   }
   function authorLinksHtml(a) {
     const l = [[a.website, 'Website'], [a.linkedin, 'LinkedIn'], [a.profile, 'Life Coach Code profile'], [a.interview, 'Interview']].filter(([u]) => u);
@@ -1873,6 +1915,7 @@ function initLinks() {
       const h = out.href;
       const cur = Detail.current();
       if (EVENT && h === EVENT.register) track('register_click');
+      else if (ZOOM && h === ZOOM) track('zoom_join');
       else if (h === LINKS.discovery) track('discovery_click');
       else if (/amazon\./.test(h)) track('amazon_click', { slug: cur ? cur.slug : '' });
     }

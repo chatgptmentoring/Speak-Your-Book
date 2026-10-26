@@ -313,6 +313,85 @@ window.FAIR_BOOKS = [
     cover: { w: 1024, h: 1536 },
     colors: { spine: '#f3e8e6', spineText: '#6b1f4e', glow: '#c792e0' },
     oracle: 'Set down what was never yours. What remains is your original light.'
+  },
+  {
+    slug: 'life-is-happening-now',
+    status: 'coming-soon',
+    title: 'Life Is Happening Now',
+    subtitle: 'Not 10 Pounds From Now: How I Lost 290 lbs Without Surgery',
+    author: 'Beth Donovan',
+    credentials: 'CMC, CWCS',
+    tags: ['Memoir', 'Weight loss', 'Wellness'],
+    aisles: ['healing', 'story'],
+    hook: 'You don’t have to wait to be you.',
+    description: [
+      'A true SparkPeople story of transformation, courage, spirit and choosing life.',
+      'Over twenty years, Beth Donovan lost 290 pounds without surgery. With a great sense of humour, real wisdom and practical advice, this is a guide from someone who truly walks the talk.'
+    ],
+    inside: [
+      'A 20-year journey, told with humour',
+      'Real, practical advice that lasts',
+      'Living now, not 10 pounds from now'
+    ],
+    forWho: 'Anyone who has been waiting to start living until the scale says so.',
+    amazon: null,
+    cover: { w: 1032, h: 1523 },
+    colors: { spine: '#4a2a6a', spineText: '#f3e6ff', glow: '#b58cff' },
+    oracle: 'Life is happening now, not ten pounds from now. You don’t have to wait to be you.'
+  },
+  {
+    slug: 'truly-yours-life',
+    status: 'coming-soon',
+    coverPending: true,
+    title: 'Truly Yours, Life',
+    subtitle: 'A journey of faith through war, exile and new beginnings',
+    author: 'Yevheniya Shalimova',
+    credentials: '',
+    tags: ['Memoir', 'Faith', 'Resilience'],
+    aisles: ['story', 'spirit'],
+    hook: 'Through every border and every loss, faith held.',
+    description: [
+      'From Soviet Russia to Ukraine, through divorce, war and life as a refugee, Yevheniya Shalimova has lived through more than most.',
+      'Through all of it, faith in God never wavered. Truly Yours, Life is the story of finally living what the soul is calling for.'
+    ],
+    inside: [
+      'From Soviet Russia to Ukraine and beyond',
+      'Divorce, war and starting again as a refugee',
+      'Faith that holds through everything',
+      'Living what your soul is calling for'
+    ],
+    forWho: 'Anyone starting over, holding on to faith, or answering their soul’s calling.',
+    amazon: null,
+    cover: { w: 1000, h: 1500 },
+    colors: { spine: '#1d3557', spineText: '#ffe8a3', glow: '#ffd166' },
+    oracle: 'Every road you have walked has led you here. Your soul knows the way.'
+  },
+  {
+    slug: 'curiously-certain',
+    status: 'coming-soon',
+    coverPending: true,
+    workingTitle: true,
+    title: 'Curiously Certain',
+    subtitle: 'Friendly conversations over coffee',
+    author: 'Rachel Tamilio',
+    credentials: '',
+    tags: ['Purpose', 'Personal growth', 'Conversations'],
+    aisles: ['mind', 'story'],
+    hook: 'You don’t have to be perfect to follow your purpose.',
+    description: [
+      'Curiously Certain reads like a friendly conversation over coffee. Rachel Tamilio doesn’t claim to have it all figured out: a work in progress, speaking from experience the way a good friend does.',
+      'The point is simple and freeing: we don’t need to be perfect to follow our purpose and help other people.'
+    ],
+    inside: [
+      'Conversations like coffee with a friend',
+      'Wisdom from someone still growing too',
+      'Purpose before perfection'
+    ],
+    forWho: 'Anyone waiting to feel ready before following their purpose.',
+    amazon: null,
+    cover: { w: 1000, h: 1500 },
+    colors: { spine: '#5a3a28', spineText: '#f6e3c8', glow: '#ffb877' },
+    oracle: 'Pour a cup, take a breath. You don’t have to be perfect to begin.'
   }
 ];
 
@@ -330,11 +409,12 @@ window.FAIR_AISLES = [
 /* Intentions for the Book Oracle. The Oracle draws one book from the matching set. */
 window.FAIR_INTENTS = [
   { label: 'Peace after heartbreak or loss', books: ['finding-love-in-the-mirror', 'everything-happens-for-you'] },
-  { label: 'To come home to myself', books: ['journey-to-empowerment', 'the-invisible-midlife-woman'] },
+  { label: 'To come home to myself', books: ['journey-to-empowerment', 'the-invisible-midlife-woman', 'life-is-happening-now'] },
   { label: 'A clear next chapter', books: ['clarity-before-momentum', 'everything-happens-for-you'] },
-  { label: 'Healing for mind, body & spirit', books: ['conscious-integrative-therapy', 'food-isnt-the-problem', 'healing-unraveled'] },
+  { label: 'Healing for mind, body & spirit', books: ['conscious-integrative-therapy', 'food-isnt-the-problem', 'healing-unraveled', 'life-is-happening-now'] },
+  { label: 'Faith and courage to begin again', books: ['truly-yours-life', 'curiously-certain', 'everything-happens-for-you'] },
   { label: 'Raising strong, happy kids', books: ['more-than-a-game', 'teen-mental-health', 'when-the-blueprint-burned'] },
-  { label: 'A story to get lost in', books: ['prince-and-the-prodigal', 'when-the-blueprint-burned', 'finding-love-in-the-mirror'] }
+  { label: 'A story to get lost in', books: ['prince-and-the-prodigal', 'when-the-blueprint-burned', 'finding-love-in-the-mirror', 'truly-yours-life'] }
 ];
 
 /* Other Amazon stores readers can switch to (same ASIN). */
@@ -370,7 +450,7 @@ window.FAIR_EVENT = {
   // stream the Zoom to YouTube Live (Zoom: Settings > In Meeting (Advanced) > Allow livestreaming)
   // and paste the YouTube link here. Vimeo links work too. Visitors then watch in a window
   // beside them as they walk, or full screen. zoom: the join link, for anyone who wants to take part.
-  stream: { url: '', zoom: '' },
+  stream: { url: '', zoom: 'https://us06web.zoom.us/j/83736821137' },
   // Who speaks when, once it is decided. time: as visitors should read it, e.g. '5:00 pm GMT'.
   // schedule: [{ time: '5:00 pm GMT', author: 'chuck-barnard', title: 'Raising resilient teens' }]
   schedule: [],
@@ -399,8 +479,12 @@ window.FAIR_LIVE = {
     'jessica-v-fuentes': 'BFjZOIiXEebfGAxty2cf96rCtILk-tJtRBAlxwPzyRTgirso7Sb3VIwUJBQR9G2IIDO-1vzevdznxNBYkwoya04',
     'jennifer-a-schmeisser': 'BMjXWCz1MZqqqBLPWOf_s244f4WNSCY-K6XXsl4n2sHWKSaLDIAQoFCPRTKiSI_WUD7XEWugidkwZ7swLzj4F2A',
     'monika-puiu': 'BGGMy8JfVOOjh7lYW437-QLmTELGcd5jdnLqKf7z21J0es4ACfByndn-P-KtUuuf55N_Cm0NzeJHu6Jsy_RmI14',
-    'dolores-fazzino': 'BGttLQ4XqjkRbD43fCIcOa6sI1swNfeDEqVlyqvSCOfMzt246AWANtAqigQV2GxA7BSsiRFqaUkCslRfk6Yq3a0'
+    'dolores-fazzino': 'BGttLQ4XqjkRbD43fCIcOa6sI1swNfeDEqVlyqvSCOfMzt246AWANtAqigQV2GxA7BSsiRFqaUkCslRfk6Yq3a0',
+    'beth-donovan': 'BEQ8d1-pN4GOo_cJHkVo_KVljodSvqorIKo9OWjs5JFDgVhyhUPiDULHa6ukqmwDLTNW26i4f18SLtSyxh9U3tI',
+    'yevheniya-shalimova': 'BLnYXR9oDNZq4gHd8cAPkUS4EWABKf2xVy4acktknH8WtuA8rK2YFOH_4oaK8NKpySf9YPtlo1k3Mp8Kauebnww',
+    'rachel-tamilio': 'BPmM0k6G13XIkh5AtFfF4kULlz6qlrU11gJ4lack8bmwqYusUEl3koIoUX1BS-kOTkFp6r6-tPuCBVNAZ9NQSfY'
   }
+
 };
 
 /* Analytics: off by default. Turn on after adding Plausible or Google Analytics to index.html. */
@@ -440,6 +524,8 @@ window.FAIR_AUTHOR_EXTRAS = {
   },
   'susan-j-razavi': {
     inbox: 'susanjrazavi@gmail.com',
+    website: 'https://tranceplan.com/',
+    websiteByLCC: true,
     linkedin: 'https://www.linkedin.com/in/susan-j-razavi-lcsw-r-tranceplan-53188817/',
     profile: 'https://www.lifecoachcode.com/members/tranceplan/',
     bio: 'A veteran psychotherapist (LCSW-R) and clinical hypnotherapist in New York, with an integrative approach that bridges science, mindfulness and spirituality. Susan developed TrancePlan, a personalised approach to hypnotherapy.'
@@ -447,6 +533,7 @@ window.FAIR_AUTHOR_EXTRAS = {
   'tanya-fasnacht-jolliffe': {
     inbox: 'tanya@litwellnesssolutions.com',
     website: 'https://litwellnesssolutions.com/',
+    websiteByLCC: true,
     linkedin: 'https://www.linkedin.com/in/tanya-fasnacht-jolliffe/',
     profile: 'https://www.lifecoachcode.com/members/tanya-fasnacht-jolliffe/',
     bio: 'A non-diet registered dietitian and the founder of L I T Wellness Solutions, offering non-diet nutrition care, wellness integration and health coaching under the motto “IGNITE the Change Within”.'
@@ -467,6 +554,23 @@ window.FAIR_AUTHOR_EXTRAS = {
     website: 'https://wayra-astrae.ro/',
     linkedin: 'https://www.linkedin.com/in/monika-maria-puiu/',
     profile: 'https://www.lifecoachcode.com/members/monika-maria/'
+  },
+  'beth-donovan': {
+    inbox: 'BethD101@comcast.net',
+    linkedin: 'https://www.linkedin.com/in/beth-donovan-9663a7142/',
+    profile: 'https://www.lifecoachcode.com/members/beth-donovan/'
+  },
+  'yevheniya-shalimova': {
+    inbox: 'evgenia7shalimova@gmail.com',
+    website: 'https://theshalimovamethod.com/',
+    websiteByLCC: true,
+    linkedin: 'https://www.linkedin.com/in/yevheniya-shalimova/',
+    profile: 'https://www.lifecoachcode.com/members/yevheniya-shalimova/'
+  },
+  'rachel-tamilio': {
+    inbox: 'rtamilio.unshackledcoach@gmail.com',
+    linkedin: 'https://www.linkedin.com/in/rtamilio/',
+    interview: 'https://www.lifecoachcode.com/2023/09/06/find-life-coach-rachel-tamilio/'
   },
   'dolores-fazzino': {
     inbox: 'doloresfazzino@gmail.com',
@@ -490,7 +594,10 @@ window.FAIR_STANDS = {
   'journey-to-empowerment': 'An open drawer with golden vines growing out of it: what we once tucked away can still bloom.',
   'when-the-blueprint-burned': 'A vintage typewriter, with blueprints drifting up from it as glowing embers.',
   'everything-happens-for-you': 'An hourglass of glowing sand: every grain falls for a reason.',
-  'healing-unraveled': 'A golden birdcage with its door open and a radiant diamond inside.'
+  'healing-unraveled': 'A golden birdcage with its door open and a radiant diamond inside.',
+  'life-is-happening-now': 'A sunlit tree in a little park, a winding path of glowing footsteps leading to it, and a sign that says NOW.',
+  'truly-yours-life': 'Sunflowers turning toward a warm light, with a letter signed “Truly yours” floating above them.',
+  'curiously-certain': 'A little café table with two steaming cups of coffee, set for a friendly conversation.'
 };
 
 /* =========================================================================

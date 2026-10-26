@@ -425,7 +425,7 @@ export function createProps(ctx) {
     return toTexture(c);
   }
 
-  /* ---------- the twelve pieces ---------- */
+  /* ---------- the pieces, one per book ---------- */
   const builders = {
     // A gilded mirror with fiery wings rising behind it
     'finding-love-in-the-mirror'() {
@@ -921,6 +921,172 @@ export function createProps(ctx) {
       };
     }
   };
+
+  function sunflowerTexture() {
+    const S = 256, c = makeCanvas(S, S), x = c.getContext('2d'), cx = S / 2;
+    for (let ring = 0; ring < 2; ring++) {
+      for (let i = 0; i < 22; i++) {
+        x.save();
+        x.translate(cx, cx);
+        x.rotate((i / 22) * Math.PI * 2 + ring * 0.14);
+        x.fillStyle = ring ? '#ffd166' : '#f2a91c';
+        x.beginPath();
+        x.moveTo(0, -34);
+        x.quadraticCurveTo(15, -80, 0, -124 + ring * 8);
+        x.quadraticCurveTo(-15, -80, 0, -34);
+        x.fill();
+        x.restore();
+      }
+    }
+    x.fillStyle = '#4a2a0c';
+    x.beginPath();
+    x.arc(cx, cx, 44, 0, Math.PI * 2);
+    x.fill();
+    x.fillStyle = 'rgba(255,209,102,.55)';
+    for (let i = 0; i < 90; i++) { const r = Math.sqrt(i / 90) * 40, a = i * 2.4; x.beginPath(); x.arc(cx + Math.cos(a) * r, cx + Math.sin(a) * r, 1.8, 0, Math.PI * 2); x.fill(); }
+    return toTexture(c);
+  }
+
+  Object.assign(builders, {
+    // A sunlit tree in a little park, glowing footsteps leading to it, and a sign that says NOW
+    'life-is-happening-now'() {
+      const g = new THREE.Group();
+      g.add(plinth(0.55));
+      const bark = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.9 });
+      const trunk = cyl(0.045, 0.08, 0.95, bark, 12);
+      trunk.position.set(0.05, 0.55, -0.1);
+      const leafA = new THREE.MeshStandardMaterial({ color: 0x5bb98c, roughness: 0.8, emissive: 0x2f7d4f, emissiveIntensity: 0.35 });
+      const leafB = new THREE.MeshStandardMaterial({ color: 0x8fd16a, roughness: 0.8, emissive: 0x4f8f2f, emissiveIntensity: 0.35 });
+      const canopy = new THREE.Group();
+      canopy.position.set(0.05, 1.18, -0.1);
+      [[0, 0.12, 0, 0.3, leafA], [-0.2, 0, 0.05, 0.22, leafB], [0.22, 0.02, 0, 0.23, leafA], [0.05, 0.3, -0.05, 0.2, leafB], [-0.05, -0.05, 0.18, 0.18, leafB]].forEach(([px, py, pz, r, m]) => {
+        const s = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), m);
+        s.position.set(px, py, pz);
+        canopy.add(s);
+      });
+      const sun = sprite(0xffe2a0, 1.6, 0.55);
+      sun.position.set(0.05, 1.35, -0.3);
+      // footsteps that light up one after another, walking toward the tree
+      const stepMat = [];
+      const steps = [];
+      for (let i = 0; i < 6; i++) {
+        const m = new THREE.MeshBasicMaterial({ color: hdr(0xffd08a, 2), transparent: true, opacity: 0.3, depthWrite: false });
+        stepMat.push(m);
+        const f = new THREE.Mesh(new THREE.CircleGeometry(0.05, 20), m);
+        f.scale.set(0.7, 1.3, 1);
+        f.rotation.x = -Math.PI / 2;
+        f.position.set((i % 2 ? 0.07 : -0.07) - 0.25 + i * 0.03, 0.09, 0.42 - i * 0.12);
+        g.add(f);
+        steps.push(f);
+      }
+      const post = cyl(0.015, 0.02, 0.62, gold, 8);
+      post.position.set(-0.36, 0.38, 0.18);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.16), new THREE.MeshStandardMaterial({ map: textBoard('NOW', 384, 144, '#4a2a6a', '#fff1c4'), emissive: 0xffffff, emissiveIntensity: 0.45, roughness: 0.6 }));
+      sign.material.emissiveMap = sign.material.map;
+      sign.position.set(-0.36, 0.72, 0.19);
+      g.add(trunk, canopy, sun, post, sign, sparks({ n: 30, w: 0.9, d: 0.7, y: 0.9, h: 1.0, color: 0xfff0b0, k: 2, size: 0.025, rise: 0.4 }));
+      return {
+        group: g,
+        update(t) {
+          canopy.rotation.z = Math.sin(t * 0.6) * 0.03;
+          const k = (t * 1.2) % 7;
+          stepMat.forEach((m, i) => { m.opacity = 0.18 + 0.8 * Math.max(0, 1 - Math.abs(k - i)); });
+        },
+        colliders: [[0, 0, 0.55]]
+      };
+    },
+
+    // Sunflowers turning toward a warm light, and a letter signed "Truly yours" floating above
+    'truly-yours-life'() {
+      const g = new THREE.Group();
+      g.add(plinth(0.5));
+      const stemMat = new THREE.MeshStandardMaterial({ color: 0x3f7d3a, roughness: 0.8 });
+      const headMat = new THREE.MeshStandardMaterial({ map: sunflowerTexture(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, emissive: 0xffffff, emissiveIntensity: 0.35, roughness: 0.7 });
+      headMat.emissiveMap = headMat.map;
+      const heads = [];
+      [[-0.2, 0.95, 0.05], [0.05, 1.15, -0.08], [0.25, 0.85, 0.08]].forEach(([x, h, z], i) => {
+        const stem = cyl(0.012, 0.016, h, stemMat, 8);
+        stem.position.set(x, 0.08 + h / 2, z);
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 6), stemMat);
+        leaf.scale.set(1.6, 0.25, 0.7);
+        leaf.position.set(x + 0.05, 0.08 + h * 0.45, z);
+        leaf.rotation.z = -0.4;
+        const head = new THREE.Mesh(new THREE.CircleGeometry(0.16 - i * 0.01, 32), headMat);
+        head.position.set(x, 0.08 + h, z + 0.01);
+        head.rotation.x = -0.25;
+        g.add(stem, leaf, head);
+        heads.push(head);
+      });
+      const light = sprite(0xffd98a, 1.4, 0.6);
+      light.position.set(0, 1.75, 0.2);
+      const letter = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.4), new THREE.MeshStandardMaterial({ map: paperTexture(['Truly yours,', 'Life'], false), side: THREE.DoubleSide, roughness: 0.8, emissive: 0xffffff, emissiveIntensity: 0.25 }));
+      letter.material.emissiveMap = letter.material.map;
+      letter.position.set(0.02, 1.6, 0.1);
+      g.add(light, letter, sparks({ n: 36, w: 0.8, d: 0.6, y: 0.6, h: 1.4, color: 0xffd166, k: 2.2, size: 0.028, rise: 0.7 }));
+      return {
+        group: g,
+        update(t) {
+          letter.position.y = 1.6 + Math.sin(t * 0.9) * 0.05;
+          letter.rotation.y = Math.sin(t * 0.4) * 0.35;
+          heads.forEach((h, i) => { h.rotation.y = Math.sin(t * 0.3 + i) * 0.15; });
+        },
+        colliders: [[0, 0, 0.5]]
+      };
+    },
+
+    // A little cafe table with two steaming cups, set for a friendly conversation
+    'curiously-certain'() {
+      const g = new THREE.Group();
+      g.add(plinth(0.55));
+      const top = cyl(0.34, 0.34, 0.03, mat.marble, 40);
+      top.position.y = 0.78;
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.01, 8, 48), gold);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.795;
+      const leg = cyl(0.025, 0.03, 0.68, gold, 12);
+      leg.position.y = 0.44;
+      const foot = cyl(0.16, 0.18, 0.025, gold, 24);
+      foot.position.y = 0.1;
+      g.add(top, rim, leg, foot);
+      const china = new THREE.MeshStandardMaterial({ color: 0xfffaf2, roughness: 0.3 });
+      const coffee = new THREE.MeshStandardMaterial({ color: 0x4a2c1c, roughness: 0.2 });
+      [[-0.14, 0x5a3a28], [0.15, 0xb8603a]].forEach(([x, col], i) => {
+        const cupMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.4 });
+        const saucer = cyl(0.085, 0.07, 0.012, china, 24);
+        saucer.position.set(x, 0.802, i ? -0.05 : 0.06);
+        const cup = cyl(0.05, 0.038, 0.07, cupMat, 24);
+        cup.position.set(x, 0.845, i ? -0.05 : 0.06);
+        const surf = new THREE.Mesh(new THREE.CircleGeometry(0.046, 20), coffee);
+        surf.rotation.x = -Math.PI / 2;
+        surf.position.set(x, 0.878, i ? -0.05 : 0.06);
+        const handle = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 6, 16, Math.PI * 1.3), cupMat);
+        handle.position.set(x + 0.055, 0.848, i ? -0.05 : 0.06);
+        handle.rotation.z = -Math.PI * 0.65;
+        g.add(saucer, cup, surf, handle);
+        const steam = sparks({ n: 18, w: 0.05, d: 0.05, y: 0.9, h: 0.45, color: 0xfff4e0, k: 1.4, size: 0.03, rise: 0.6, alpha: 0.5 });
+        steam.position.set(x, 0.9, i ? -0.05 : 0.06);
+        g.add(steam);
+      });
+      // two bistro chairs, angled toward each other
+      [-1, 1].forEach((sd) => {
+        const ch = new THREE.Group();
+        const seat = cyl(0.15, 0.15, 0.025, mat.velvetRed, 24);
+        seat.position.y = 0.46;
+        const back = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.012, 8, 24, Math.PI), gold);
+        back.position.set(0, 0.66, -0.13);
+        const legC = cyl(0.012, 0.012, 0.44, gold, 8);
+        legC.position.y = 0.23;
+        ch.add(seat, back, legC);
+        ch.position.set(sd * 0.48, 0, 0.05);
+        ch.rotation.y = sd * -1.2;
+        g.add(ch);
+      });
+      const glow = sprite(0xffcf8a, 1.3, 0.45);
+      glow.position.y = 1.0;
+      g.add(glow);
+      return { group: g, update() {}, colliders: [[0, 0, 0.62]] };
+    }
+  });
 
   // Fallback for books added later: a cluster of floating lanterns
   function fallback(book) {
