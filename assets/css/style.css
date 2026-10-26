@@ -988,6 +988,20 @@ kbd {
 .au__books { margin-top: 12px; display: grid; gap: 8px; }
 .au__books button { width: 100%; display: flex; align-items: center; gap: 14px; padding: 8px; border-radius: 14px; border: 1px solid rgba(226, 189, 120, .14); background: rgba(255, 255, 255, .03); text-align: left; cursor: pointer; }
 .au__books button:hover { border-color: rgba(226, 189, 120, .6); }
+.au__msg { margin-top: 20px; display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(226, 189, 120, .22); }
+.au__msg[hidden] { display: none; }
+.au__msg .bi__h { margin-top: 0; }
+.au__msg label { display: grid; gap: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.au__msg textarea { resize: vertical; min-height: 110px; line-height: 1.5; }
+.au__msg input:focus, .au__msg textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(226, 189, 120, .18); }
+.au__msg .card__actions { margin-top: 4px; }
+.au__msg .text-link { border: 0; background: none; padding: 0; cursor: pointer; font-size: .84rem; }
+.au__hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.au__msg-status { font-size: .86rem; color: var(--muted); }
+.au__msg-status:empty { display: none; }
+.au__msg-status.is-err { color: #ffb3bd; }
+.au__msg-done { font-size: .92rem; color: rgba(242, 234, 221, .88); }
+.au__msg-done b { display: block; margin-bottom: 4px; font-family: var(--serif); font-size: 1.35rem; font-weight: 600; color: #8fe0ad; }
 .au__books img { width: 52px; border-radius: 2px 4px 4px 2px; box-shadow: 0 8px 16px -8px #000; }
 .au__books span { display: flex; flex-direction: column; line-height: 1.2; }
 .au__books b { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; }
@@ -1003,7 +1017,7 @@ kbd {
 .pp__me { margin-top: 8px; }
 .pp__form { margin-top: 10px; display: flex; gap: 8px; }
 .pp__form[hidden] { display: none; }
-.pp__form input, .cert-form input, .cr__form input {
+.pp__form input, .cert-form input, .cr__form input, .au__msg input, .au__msg textarea {
   flex: 1;
   min-width: 0;
   padding: .7em 1em;

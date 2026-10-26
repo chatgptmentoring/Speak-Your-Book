@@ -403,7 +403,37 @@ window.FAIR_ANALYTICS = { enabled: false };
      photo: 'assets/img/authors/<id>.webp', welcome: 'A short welcome message',
      voice: 'assets/audio/<id>.mp3' (a recorded welcome), website: 'https://...'
    ========================================================================= */
-window.FAIR_AUTHOR_EXTRAS = {};
+window.FAIR_AUTHOR_EXTRAS = {
+  // inbox: where "Send a message" goes (see FAIR_CONTACT below). Leave it empty to hide the button.
+  'soonjin-cho': { inbox: '' },
+  'edith-moricz': { inbox: '' },
+  'chuck-barnard': { inbox: '' },
+  'sonia-jenkins': { inbox: '' },
+  'susan-j-razavi': { inbox: '' },
+  'tanya-fasnacht-jolliffe': { inbox: '' },
+  'jessica-v-fuentes': { inbox: '' },
+  'jennifer-a-schmeisser': { inbox: '' },
+  'monika-puiu': { inbox: '' },
+  'dolores-fazzino': { inbox: '' }
+};
+
+/* =========================================================================
+   Messages to authors
+   Visitors can write to an author from the author's panel. The message is emailed through
+   FormSubmit (https://formsubmit.co), so no server is needed, and the author can simply reply.
+   - inbox (per author, above): the author's email address, or better, the random alias that
+     FormSubmit sends after the first message is confirmed. The alias keeps the address out of
+     the public code.
+   - The first message to a new inbox triggers a one-time "Activate FormSubmit" email to that
+     inbox: click it once and every message after that arrives normally.
+   - fallbackInbox: a Life Coach Code inbox for authors who have no inbox of their own. Messages
+     to those authors go there, to pass along.
+   ========================================================================= */
+window.FAIR_CONTACT = {
+  enabled: true,
+  endpoint: 'https://formsubmit.co/ajax/',
+  fallbackInbox: ''
+};
 
 window.FAIR_AUTHORS = (() => {
   const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

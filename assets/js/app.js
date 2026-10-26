@@ -12,6 +12,7 @@ const INTENTS = window.FAIR_INTENTS || [];
 const STORES = window.FAIR_STORES || [];
 const LINKS = window.FAIR_LINKS || {};
 const EVENT = window.FAIR_EVENT || null;
+const CONTACT = window.FAIR_CONTACT || {};
 const AUTHORS = window.FAIR_AUTHORS || [];
 const authorById = Object.fromEntries(AUTHORS.map((a) => [a.id, a]));
 const authorOfSlug = {};
@@ -1147,8 +1148,65 @@ const AuthorPanel = (() => {
       <div class="card__actions">
         ${EventInfo && EventInfo.upcoming() ? `<a class="btn btn--gold" data-event-register href="${esc(EVENT.register)}" target="_blank" rel="noopener">Register free to meet them live</a>` : `<a class="btn btn--gold" href="${LINKS.discovery}" target="_blank" rel="noopener">Speak your own book</a>`}
         ${here ? `<button class="btn btn--ghost" type="button" data-wave="${here.id}">Wave hello 👋</button><button class="btn btn--ghost" type="button" data-go="${here.id}">Walk over</button>` : ''}
+        ${inboxOf(a) ? '<button class="btn btn--ghost" type="button" data-msg>Send a message ✉</button>' : ''}
         ${a.website ? `<a class="text-link" href="${esc(a.website)}" target="_blank" rel="noopener">Visit their website →</a>` : ''}
-      </div>`;
+      </div>
+      ${inboxOf(a) ? messageForm(a) : ''}`;
+  }
+  // where a message to this author is emailed: their own inbox, or Life Coach Code's to pass along
+  const inboxOf = (a) => (CONTACT.enabled ? (a.inbox || CONTACT.fallbackInbox || '').trim() : '');
+  function messageForm(a) {
+    const own = !!(a.inbox || '').trim();
+    return `<form class="au__msg" id="au-msg" hidden novalidate>
+      <h3 class="bi__h">A message for ${esc(a.displayName)}</h3>
+      <label><span>Your name</span><input name="name" type="text" required maxlength="80" autocomplete="name"></label>
+      <label><span>Your email</span><input name="email" type="email" required maxlength="120" autocomplete="email"></label>
+      <label><span>Your message</span><textarea name="message" required maxlength="2000" rows="5" placeholder="What would you like to say or ask?"></textarea></label>
+      <input class="au__hp" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="card__actions"><button class="btn btn--gold" type="submit">Send message</button><button class="text-link" type="button" data-msg-cancel>Cancel</button></div>
+      <p class="au__msg-status" role="status" aria-live="polite"></p>
+      <p class="sheet__fine">Your name, email and message are emailed ${own ? `to ${esc(a.displayName)}` : `to Life Coach Code, who will pass them to ${esc(a.displayName)}`}, so they can reply to you directly. Sent securely with FormSubmit.</p>
+    </form>`;
+  }
+  async function send(form) {
+    const a = authorById[currentId];
+    const status = $('.au__msg-status', form);
+    const btn = $('button[type="submit"]', form);
+    const v = (n) => form.elements.namedItem(n).value.trim();
+    const data = { name: v('name'), email: v('email'), message: v('message') };
+    const fail = (msg) => { status.textContent = msg; status.className = 'au__msg-status is-err'; };
+    if (!data.name || !data.message) return fail('Please add your name and a message.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return fail('Please check your email address so they can reply.');
+    if (v('_honey')) return; // a bot filled the hidden field
+    const key = 'lcc-fair-msg-' + a.id;
+    if (Date.now() - (store.get(key, 0) || 0) < 60000) return fail('Your message is on its way. Please wait a minute before sending another.');
+    btn.disabled = true;
+    status.textContent = 'Sending…';
+    status.className = 'au__msg-status';
+    try {
+      const inbox = inboxOf(a).replace(/[^\w@.+-]/g, '');
+      const res = await fetch((CONTACT.endpoint || 'https://formsubmit.co/ajax/') + inbox, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          author: a.displayName,
+          books: a.books.map((s) => bySlug[s].title).join(', '),
+          _subject: `A message for ${a.displayName} from the Virtual Book Fair`,
+          _template: 'box',
+          _captcha: 'false'
+        })
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || String(out.success) !== 'true') throw new Error(out.message || res.status);
+      store.set(key, Date.now());
+      form.innerHTML = `<p class="au__msg-done"><b>Message sent ✓</b>Thank you, ${esc(data.name.split(' ')[0])}. ${esc(a.displayName)} will reply to ${esc(data.email)}.</p>`;
+      Sound.play('win');
+      track('author_message', { author: a.id });
+    } catch (err) {
+      btn.disabled = false;
+      fail('The message could not be sent just now. Please try again in a moment.');
+    }
   }
   function open(id) {
     if (!authorById[id]) return;
@@ -1164,8 +1222,18 @@ const AuthorPanel = (() => {
     if (w) { const p = People.peer(w.getAttribute('data-wave')); if (p) People.wave({ kind: 'peer', id: p.id, name: p.name, author: p.author }); }
     const g = e.target.closest('[data-go]');
     if (g) { sheet.close(); if (Detail.isOpen()) Detail.close(); People.goTo(g.getAttribute('data-go')); }
+    const f = $('#au-msg', sheet.el);
+    if (f && e.target.closest('[data-msg]')) {
+      f.hidden = false;
+      f.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+      setTimeout(() => f.elements.namedItem('name').focus({ preventScroll: true }), 250);
+      if (!f.elements.namedItem('name').value) f.elements.namedItem('name').value = People.myName();
+    }
+    if (f && e.target.closest('[data-msg-cancel]')) f.hidden = true;
   });
-  return { open, refresh: () => { if (sheet.isOpen()) render(); } };
+  sheet.el.addEventListener('submit', (e) => { if (e.target.id === 'au-msg') { e.preventDefault(); send(e.target); } });
+  sheet.el.addEventListener('input', (e) => { const st = e.target.form && $('.au__msg-status.is-err', e.target.form); if (st) { st.textContent = ''; st.className = 'au__msg-status'; } });
+  return { open, refresh: () => { if (sheet.isOpen() && !$('#au-msg:not([hidden])', sheet.el)) render(); } };
 })();
 
 /* =========================================================================

@@ -94,6 +94,23 @@ Paste the printed `authorKeys` into `books.js`, publish, and send each author th
 **Never commit the links.** An author can stop appearing as the author from the *Who's here*
 panel.
 
+## Messages to authors
+
+Each author's panel can show a **Send a message** button. Visitors write their name, email and
+message, and it arrives in the author's inbox as an email they can simply reply to. The site
+has no server, so messages are delivered by FormSubmit (https://formsubmit.co, free).
+
+1. In `assets/js/books.js`, fill in `inbox` for each author in `FAIR_AUTHOR_EXTRAS` with their
+   email address. Authors with an empty `inbox` show no button.
+2. Publish, then send one test message to each author. FormSubmit emails that inbox a one-time
+   **Activate** link; once it is clicked, every message arrives normally.
+3. Optional, for privacy: the activation email also gives a random alias for the address.
+   Put the alias in `inbox` instead of the email, so the address is not visible in the site's code.
+
+To route every message through Life Coach Code instead (for example for authors who prefer not
+to share an address), set `FAIR_CONTACT.fallbackInbox`; authors without their own inbox then
+get the button, and the visitor is told Life Coach Code will pass the message along.
+
 ## Live presence and privacy
 
 Visitors see each other through a public MQTT relay over a secure WebSocket (`FAIR_LIVE.brokers`).
