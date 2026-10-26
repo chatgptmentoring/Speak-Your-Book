@@ -5,6 +5,10 @@
  * <slug>-full.webp and <slug>-glow.webp (see README), then add an entry below.
  * A book that is not out yet: set status: 'coming-soon' and amazon: null. Its booth then
  * shows a "Coming soon" ribbon and a discovery-call invitation instead of a buy button.
+ *
+ * Optional extras per book, shown only when you add them:
+ *   samplePages: ['assets/img/inside/<slug>-1.webp', ...]   real pages to leaf through in 3D
+ *   testimonials: [{ quote: '...', name: '...' }]            reader quotes in the booth panel
  */
 window.FAIR_BOOKS = [
   {
@@ -348,3 +352,69 @@ window.FAIR_LINKS = {
   speakYourBook: 'https://www.lifecoachcode.com/speak-your-book',
   solutions: 'https://www.lifecoachcode.com/solutions'
 };
+
+/* =========================================================================
+   The live event the fair is built around
+   ========================================================================= */
+window.FAIR_EVENT = {
+  name: 'Speak Your Book',
+  date: '2026-11-01', // the day of the event (YYYY-MM-DD)
+  // When the start time is confirmed, add it with its UTC offset, for example
+  // '2026-11-01T17:00:00+00:00'. The fair then counts down to the minute and shows
+  // every visitor the start time in their own time zone.
+  start: '',
+  where: 'Live on Zoom',
+  price: 'Free',
+  register: 'https://forms.gle/DCKC79M3vk3nCYMb8',
+  about: 'A free, live virtual event on Zoom, hosted by Life Coach Code. Every author in this fair speaks at the event: come and meet them live.'
+};
+
+/* =========================================================================
+   Meet everyone: live presence
+   Visitors who are in the fair at the same time see each other as glowing figures with
+   a first name, can wave and send reactions. No free text is ever exchanged.
+   Messages travel through a public MQTT broker over a secure WebSocket.
+   ========================================================================= */
+window.FAIR_LIVE = {
+  enabled: true,
+  brokers: ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'],
+  room: 'lcc-virtual-book-fair-2026',
+  // Public keys for the private author links (made with: node tools/author-links.mjs).
+  // An author who opens their link shows up as a verified, golden author avatar.
+  authorKeys: {
+    'soonjin-cho': 'BPhRu1O0Ne-u9_ELCt3WnUDtaGfqGqL_7xkLqsuYWA4Rnc64giM4d4LKDFc2ilLSEyDG1oYzIbm9vUJ5JCQqhZE',
+    'edith-moricz': 'BJPbsztX_w4F1Zo12D8bb-IKyeFtqQiREaRsFHOP2oqhoru_bdEeoD_j2fyvR9GmcwDg94eSkfjzRYx9PTEOcc8',
+    'chuck-barnard': 'BAQRA4btFEAsOg_F-FoSj4nvJGXlfdESW3LNm3T94YnOUKIt_isbpKrB5jWshZVXwK8ZnwZmT1_A8CKXKCnMnHs',
+    'sonia-jenkins': 'BMHGdnF63SuxDCu2wiVuRlbmWLt5o0Xkrz_E7DhOI73rKjyRHG_y8hUktqKFUx1KPMIMlTDnaZZYjSwJEEdVDIk',
+    'susan-j-razavi': 'BAnPlt24iFrI39D1zwN3E1aMT8E49ZaPvhylLNdPN1Tay8fs151bPuRIOBvMAIk1OgUjh20kWA8jEv0ES_0acq4',
+    'tanya-fasnacht-jolliffe': 'BN1N-_0Z8c19QXe8UdoJ14jdQFucAKCj6ZVPRzlek7YvcVr6z0CvNMGNc_mpsL6Zio4mhkjauctDBCQMwCzW5bQ',
+    'jessica-v-fuentes': 'BFjZOIiXEebfGAxty2cf96rCtILk-tJtRBAlxwPzyRTgirso7Sb3VIwUJBQR9G2IIDO-1vzevdznxNBYkwoya04',
+    'jennifer-a-schmeisser': 'BMjXWCz1MZqqqBLPWOf_s244f4WNSCY-K6XXsl4n2sHWKSaLDIAQoFCPRTKiSI_WUD7XEWugidkwZ7swLzj4F2A',
+    'monika-puiu': 'BGGMy8JfVOOjh7lYW437-QLmTELGcd5jdnLqKf7z21J0es4ACfByndn-P-KtUuuf55N_Cm0NzeJHu6Jsy_RmI14',
+    'dolores-fazzino': 'BGttLQ4XqjkRbD43fCIcOa6sI1swNfeDEqVlyqvSCOfMzt246AWANtAqigQV2GxA7BSsiRFqaUkCslRfk6Yq3a0'
+  }
+};
+
+/* Analytics: off by default. Turn on after adding Plausible or Google Analytics to index.html. */
+window.FAIR_ANALYTICS = { enabled: false };
+
+/* =========================================================================
+   The authors (built from the books). Optional extras per author id:
+     photo: 'assets/img/authors/<id>.webp', welcome: 'A short welcome message',
+     voice: 'assets/audio/<id>.mp3' (a recorded welcome), website: 'https://...'
+   ========================================================================= */
+window.FAIR_AUTHOR_EXTRAS = {};
+
+window.FAIR_AUTHORS = (() => {
+  const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const map = new Map();
+  window.FAIR_BOOKS.forEach((b) => {
+    const id = slugify(b.author);
+    if (!map.has(id)) map.set(id, { id, name: b.author, displayName: b.author, credentials: '', books: [] });
+    const a = map.get(id);
+    a.books.push(b.slug);
+    if (b.credentials && !a.credentials) a.credentials = b.credentials;
+    if (b.displayAuthor && /^(Dr\.|Prof\.)/.test(b.displayAuthor)) a.displayName = b.displayAuthor;
+  });
+  return [...map.values()].map((a) => ({ ...a, ...(window.FAIR_AUTHOR_EXTRAS[a.id] || {}) }));
+})();

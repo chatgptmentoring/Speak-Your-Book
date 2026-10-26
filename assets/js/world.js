@@ -23,8 +23,6 @@ const BOOTH_X = 4.3;
 const BOOTH_Z0 = -9;
 const BOOTH_STRIDE = 5;
 const ORACLE_POS = new V3(4.5, 0, -3.2);
-const STAGE_Z = -76;
-const TEMPLE_Z = -91;
 
 const damp = (a, b, lambda, dt) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 const smooth = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
@@ -54,7 +52,7 @@ void main(){
   p.y = uRise > 0.0 ? mod(p.y + uTime * (0.04 + aSeed * 0.08) * uRise, uHeight) : p.y;
   p.x += sin(uTime * 0.25 + aSeed * 40.0) * 0.25 * uRise;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  gl_PointSize = uSize * (0.6 + aSeed * 0.8) * uScale / -mv.z;
+  gl_PointSize = min(uSize * (0.6 + aSeed * 0.8) * uScale / max(-mv.z, 0.05), 96.0);
   vA = 0.35 + 0.65 * abs(sin(uTime * (0.6 + aSeed) + aSeed * 50.0));
   gl_Position = projectionMatrix * mv;
 }`;
@@ -79,9 +77,75 @@ function pointsMaterial(color, { size = 0.05, alpha = 1, rise = 0, height = 9 } 
   });
 }
 
+/* Holograms: the authors at their booths, and everyone else walking the fair live. */
+function holoMaterial(color, opacity = 1) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(color) }, uOpacity: { value: opacity }, uHeight: { value: 0.74 } },
+    vertexShader: `varying vec3 vN; varying vec3 vV; varying float vY; varying vec3 vC;
+      void main(){
+        vec4 lp = vec4(position, 1.0);
+        vec3 n = normal;
+        #ifdef USE_INSTANCING
+          lp = instanceMatrix * lp;
+          n = mat3(instanceMatrix) * n;
+        #endif
+        vC = vec3(1.0);
+        #ifdef USE_INSTANCING_COLOR
+          vC = instanceColor;
+        #endif
+        vY = position.y;
+        vec4 mv = modelViewMatrix * lp;
+        vN = normalMatrix * n;
+        vV = -mv.xyz;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `uniform float uTime; uniform vec3 uColor; uniform float uOpacity; uniform float uHeight;
+      varying vec3 vN; varying vec3 vV; varying float vY; varying vec3 vC;
+      void main(){
+        float nl = length(vN);
+        vec3 n = nl > 1e-4 ? vN / nl : vec3(0.0, 1.0, 0.0);
+        float f = clamp(1.0 - abs(dot(n, normalize(vV))), 0.0, 1.0);
+        float scan = 0.55 + 0.45 * smoothstep(-0.2, 0.6, sin(vY * 180.0 - uTime * 6.0));
+        float band = 0.7 + 0.3 * smoothstep(0.0, 0.05, fract(vY * 1.3 - uTime * 0.28));
+        float fade = smoothstep(0.0, 0.5, vY / uHeight);
+        float flick = 0.94 + 0.06 * sin(uTime * 23.0 + vY * 4.0);
+        float a = (0.07 + 0.75 * pow(f, 1.7)) * scan * band * fade * flick * uOpacity;
+        gl_FragColor = vec4(uColor * vC * (0.45 + 0.9 * pow(f, 2.0)), a);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+}
+
+// head and shoulders, flattened front to back below the neck
+function bustGeometry() {
+  const prof = [[0, 0], [0.26, 0], [0.285, 0.08], [0.3, 0.18], [0.29, 0.25], [0.24, 0.3], [0.16, 0.335], [0.075, 0.36], [0.062, 0.41],
+    [0.07, 0.44], [0.098, 0.47], [0.117, 0.52], [0.123, 0.58], [0.118, 0.64], [0.1, 0.69], [0.07, 0.725], [0, 0.74]];
+  const g = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 32);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) pos.setZ(i, pos.getZ(i) * THREE.MathUtils.lerp(0.56, 0.92, smooth(0.3, 0.42, pos.getY(i))));
+  g.computeVertexNormals();
+  // the poles have no area, so no normal: point them straight up or down (a zero normal would
+  // become NaN in the shader, and bloom would smear it across the whole screen)
+  const nrm = g.attributes.normal;
+  for (let i = 0; i < nrm.count; i++) {
+    if (Math.hypot(nrm.getX(i), nrm.getY(i), nrm.getZ(i)) < 1e-4) nrm.setXYZ(i, 0, pos.getY(i) > 0.37 ? 1 : -1, 0);
+  }
+  return g;
+}
+
 export async function createWorld(opts) {
   const noop = () => {};
-  const { canvas, books, onProgress = noop, onHover = noop, onSelect = noop, onZone = noop, onNear = noop, onMoved = noop } = opts;
+  const { canvas, books, authors = [], leftInset = () => 0.3, onProgress = noop, onHover = noop, onSelect = noop, onZone = noop, onNear = noop, onMoved = noop, onPage = noop } = opts;
+  const SIGNS = {
+    crestRing: '\u2726 LIFE COACH CODE \u2726 YOUR HOSTS \u2726 THE VIRTUAL BOOK FAIR \u2726 SPEAK YOUR BOOK ',
+    floorRing: '\u2726 THE VIRTUAL BOOK FAIR \u2726 HOSTED BY LIFE COACH CODE ',
+    flag: ['SPEAK', 'YOUR', 'BOOK', '-', 'VIRTUAL BOOK FAIR'],
+    plaque: '',
+    poster: { pill: 'LIVE ON ZOOM \u00b7 FREE', eyebrow: 'LIFE COACH CODE PRESENTS', title1: 'Speak', title2: 'Your Book', date: '', body: '', cta: 'REGISTER FREE', foot: '' },
+    screens: null,
+    authors: [],
+    ...(opts.signs || {})
+  };
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const small = Math.min(window.innerWidth, window.innerHeight) < 640;
   const lowEnd = coarse || small || (navigator.hardwareConcurrency || 8) <= 4;
@@ -96,6 +160,10 @@ export async function createWorld(opts) {
     poster: lowEnd ? 448 : 768,
     dust: lowEnd ? 700 : 1600
   };
+  // the hall grows with the number of books: the stage and the temple always sit past the last booth
+  const LAST_BOOTH_Z = BOOTH_Z0 - (books.length - 1) * BOOTH_STRIDE;
+  const STAGE_Z = Math.min(-76, LAST_BOOTH_Z - 12);
+  const TEMPLE_Z = STAGE_Z - 15;
 
   /* ---------- renderer, scene, camera ---------- */
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false, stencil: false });
@@ -200,6 +268,8 @@ export async function createWorld(opts) {
     paper: new THREE.MeshStandardMaterial({ color: 0xf1e7d4, roughness: 0.85 })
   };
 
+  const poolMat = (color, opacity = 0.5) => new THREE.MeshBasicMaterial({ map: tex.radial, color: new THREE.Color(color), transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
+
   const clickables = [];
   const colliders = [];
   const interactables = [];
@@ -209,7 +279,8 @@ export async function createWorld(opts) {
   const IDENTITY = new THREE.Quaternion();
 
   /* ---------- floor ---------- */
-  const FLOOR_LEN = 128, FLOOR_Z = -40, FLOOR_W = 28;
+  const FLOOR_FRONT = 24, FLOOR_BACK = TEMPLE_Z - 13;
+  const FLOOR_LEN = FLOOR_FRONT - FLOOR_BACK, FLOOR_Z = (FLOOR_FRONT + FLOOR_BACK) / 2, FLOOR_W = 28;
   if (Q.reflector) {
     const mirror = new Reflector(new THREE.PlaneGeometry(FLOOR_W, FLOOR_LEN), {
       clipBias: 0.003,
@@ -254,15 +325,18 @@ export async function createWorld(opts) {
     scene.add(under);
   }
 
-  const carpet = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 82), new THREE.MeshStandardMaterial({ map: tex.carpet, roughness: 0.96 }));
+  const CARPET_LEN = 8 - (STAGE_Z + 2);
+  tex.carpet.repeat.set(1, Math.round(CARPET_LEN / 2.4));
+  const carpet = new THREE.Mesh(new THREE.PlaneGeometry(2.5, CARPET_LEN), new THREE.MeshStandardMaterial({ map: tex.carpet, roughness: 0.96 }));
   carpet.rotation.x = -Math.PI / 2;
-  carpet.position.set(0, 0.006, 8 - 41);
+  carpet.position.set(0, 0.006, 8 - CARPET_LEN / 2);
   carpet.receiveShadow = true;
   scene.add(carpet);
 
   /* ---------- lights ---------- */
   scene.add(new THREE.HemisphereLight(0xffe3c4, 0x1a0f22, 0.55));
-  const lampZs = [5, -12, -28, -44, -60, -78];
+  const lampZs = [5];
+  for (let z = -12; z > STAGE_Z - 4; z -= 16) lampZs.push(z);
   lampZs.forEach((z, i) => {
     if (Q.lights < 6 && i % 2) return;
     const l = new THREE.PointLight(0xffb070, Q.lights < 6 ? 60 : 40, 22, 1.6);
@@ -320,12 +394,6 @@ export async function createWorld(opts) {
     const archTrim = new THREE.Mesh(new THREE.TorusGeometry(3.06, 0.05, 10, 80, Math.PI), mat.gold);
     archTrim.position.set(0, 6.5, 0.12);
     g.add(archTrim);
-    const keystone = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.12, 64), mat.gold);
-    keystone.rotation.x = Math.PI / 2;
-    keystone.position.set(0, 9.95, 0.18);
-    const logoDisc = new THREE.Mesh(new THREE.CircleGeometry(0.72, 64), new THREE.MeshBasicMaterial({ map: logoTex, color: new THREE.Color(0.95, 0.95, 0.95) }));
-    logoDisc.position.set(0, 9.95, 0.25);
-    g.add(keystone, logoDisc);
     const sign = new THREE.Mesh(
       new THREE.PlaneGeometry(4.6, 1.15),
       new THREE.MeshStandardMaterial({
@@ -341,6 +409,20 @@ export async function createWorld(opts) {
       chain.position.set(x, 8.7, 0.18);
       g.add(chain);
     });
+    // the live event, hanging under the sign
+    if (SIGNS.plaque) {
+      const plaque = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 0.44), new THREE.MeshStandardMaterial({
+        map: T.signTexture({ title: SIGNS.plaque, w: 2048, h: 256 }), emissive: 0xffffff, emissiveIntensity: 0.7, roughness: 0.55
+      }));
+      plaque.material.emissiveMap = plaque.material.map;
+      plaque.position.set(0, 6.42, 0.18);
+      g.add(plaque);
+      [-1.2, 1.2].forEach((x) => {
+        const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.16), mat.gold);
+        chain.position.set(x, 6.7, 0.18);
+        g.add(chain);
+      });
+    }
     scene.add(g);
     const archPts = [];
     for (let i = 0; i <= 60; i++) {
@@ -353,7 +435,8 @@ export async function createWorld(opts) {
       for (let i = 0; i <= 18; i++) pts.push(new V3(x + Math.sin(i * 1.3) * 0.36, i * 0.36, 0.4 + Math.cos(i * 1.3) * 0.2));
       addFairy(pts);
     });
-    // lamp posts outside
+    // lamp posts outside, each flying a Life Coach Code flag
+    const flagTex = T.flagTexture(logoImg, SIGNS.flag);
     [-5.6, 5.6].forEach((x) => {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 3.2, 16), mat.gold);
       post.position.set(x, 1.6, 5);
@@ -361,22 +444,161 @@ export async function createWorld(opts) {
       globe.position.set(x, 3.4, 5);
       const cap = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.16, 24), mat.gold);
       cap.position.set(x, 3.66, 5);
-      scene.add(post, globe, cap);
+      const inward = -Math.sign(x);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.78, 8), mat.gold);
+      arm.rotation.z = Math.PI / 2;
+      arm.position.set(x + inward * 0.39, 3.02, 5);
+      const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 1.86), new THREE.MeshStandardMaterial({
+        map: flagTex, emissive: 0xffffff, emissiveMap: flagTex, emissiveIntensity: 0.35, roughness: 0.85, side: THREE.DoubleSide, alphaTest: 0.5, transparent: true
+      }));
+      flag.position.set(x + inward * 0.42, 2.06, 5);
+      scene.add(post, globe, cap, arm, flag);
+      animated.push((t) => { flag.rotation.y = Math.sin(t * 0.8 + x) * 0.06; });
       colliders.push({ x, z: 5, r: 0.18 });
     });
+  }
+
+  /* ---------- the Life Coach Code crest: the hosts of the fair, crowning the entrance ---------- */
+  {
+    const C = new V3(0, 12.6, 0.1);
+    const crest = new THREE.Group();
+    crest.position.copy(C);
+    crest.scale.setScalar(1.2);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.radial, color: new THREE.Color(1.0, 0.72, 0.42), transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(8, 8, 1);
+    glow.position.z = -0.7;
+    const rays = new THREE.Mesh(new THREE.PlaneGeometry(8.6, 8.6), new THREE.MeshBasicMaterial({
+      map: T.sunburstTexture(), color: new THREE.Color(1.0, 0.82, 0.55).multiplyScalar(0.85), transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    rays.position.z = -0.55;
+    const laurel = new THREE.Mesh(new THREE.PlaneGeometry(5.7, 3.9), new THREE.MeshStandardMaterial({
+      map: T.laurelTexture(), transparent: true, alphaTest: 0.3, metalness: 0.35, roughness: 0.4, emissive: 0xffffff, emissiveIntensity: 0.38
+    }));
+    laurel.material.emissiveMap = laurel.material.map;
+    laurel.position.set(0, -0.08 * 3.9, -0.3);
+    const ringTex = T.textRingTexture(SIGNS.crestRing);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1.376, 1.72, 160, 1), new THREE.MeshBasicMaterial({ map: ringTex, transparent: true, color: new THREE.Color(1.15, 1.08, 1.0) }));
+    ring.position.z = -0.02;
+    const rimOuter = new THREE.Mesh(new THREE.TorusGeometry(1.74, 0.045, 12, 160), mat.gold);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(1.36, 1.36, 0.22, 96), mat.gold);
+    body.rotation.x = Math.PI / 2;
+    const face = new THREE.Mesh(new THREE.CircleGeometry(1.35, 96), new THREE.MeshStandardMaterial({
+      map: T.crestTexture(logoImg), emissive: 0xffffff, roughness: 0.38, metalness: 0.1, emissiveIntensity: 0.3
+    }));
+    face.material.emissiveMap = face.material.map;
+    face.position.z = 0.112;
+    const ribbon = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 5.2 * 440 / 2048), new THREE.MeshStandardMaterial({
+      map: T.ribbonTexture('LIFE COACH CODE'), transparent: true, alphaTest: 0.4, roughness: 0.6, emissive: 0xffffff, emissiveIntensity: 0.55
+    }));
+    ribbon.material.emissiveMap = ribbon.material.map;
+    ribbon.position.set(0, -1.62, 0.32);
+    crest.add(glow, rays, laurel, ring, rimOuter, body, face, ribbon);
+    // searchlights sweeping the sky behind the crest: the opening night of the fair
+    const beams = [];
+    if (!lowEnd) {
+      const beamGeo = new THREE.CylinderGeometry(0.06, 1.5, 18, 32, 1, true);
+      beamGeo.translate(0, -9, 0);
+      [-0.55, -0.2, 0.2, 0.55].forEach((tilt, i) => {
+        const beam = new THREE.Mesh(beamGeo, coneMaterial(0xffd9a0, 0.14));
+        beam.rotation.set(-0.18, 0, Math.PI + tilt);
+        beam.position.set(tilt * 1.6, -1.2, -1.1);
+        beam.userData.tilt = tilt;
+        beam.userData.ph = i * 1.7;
+        crest.add(beam);
+        beams.push(beam);
+      });
+      const crestLight = new THREE.PointLight(0xffd9a0, 5, 10, 1.6);
+      crestLight.position.set(0, 11.4, 4.2);
+      scene.add(crestLight);
+    }
+    const cInfo = { kind: 'crest' };
+    [face, body, ribbon, laurel].forEach((m) => { m.userData.info = cInfo; clickables.push(m); });
+    scene.add(crest);
+    animated.push((t) => {
+      rays.rotation.z = t * 0.035;
+      ring.rotation.z = -t * 0.05;
+      rays.material.opacity = 0.5 + Math.sin(t * 0.9) * 0.08;
+      glow.material.opacity = 0.28 + Math.sin(t * 0.7) * 0.04;
+      beams.forEach((b) => { b.rotation.z = Math.PI + b.userData.tilt + Math.sin(t * 0.22 + b.userData.ph) * 0.18; });
+    });
+    // fairy lights tracing the laurel
+    const pts = [];
+    for (let i = 0; i <= 40; i++) {
+      const a = Math.PI * (1.08 + (i / 40) * 0.84);
+      pts.push(new V3(C.x + Math.cos(a + Math.PI) * 2.5, C.y + Math.sin(a + Math.PI) * 2.5 - 0.12, C.z + 0.12));
+    }
+    addFairy(pts);
+  }
+
+  /* ---------- the plaza: a compass rose inlaid with the logo, and posters for the live event ---------- */
+  {
+    const inlayTex = T.floorInlayTexture(logoImg, SIGNS.floorRing);
+    const inlay = new THREE.Mesh(new THREE.CircleGeometry(2.6, 96), new THREE.MeshStandardMaterial({
+      map: inlayTex, emissive: 0xffffff, emissiveMap: inlayTex, emissiveIntensity: 0.16, roughness: 0.32, metalness: 0.2
+    }));
+    inlay.rotation.x = -Math.PI / 2;
+    inlay.position.set(0, 0.012, 11);
+    inlay.receiveShadow = Q.shadows;
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), poolMat(0xffb36b, 0.45));
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.set(0, 0.008, 11);
+    scene.add(halo, inlay);
+
+    const posterTex = T.eventPosterTexture(logoImg, SIGNS.poster);
+    const eInfo = { kind: 'event' };
+    [-1, 1].forEach((side) => {
+      const easel = buildEasel(posterTex);
+      easel.position.set(side * 2.3, 0, 1.7);
+      easel.rotation.y = -side * 0.32;
+      scene.add(easel);
+      easel.traverse((o) => { if (o.isMesh) { o.userData.info = eInfo; clickables.push(o); } });
+      colliders.push({ x: side * 2.3, z: 1.7, r: 0.45 });
+      interactables.push({ pos: new V3(side * 2.3, 0, 2.2), range: 3.0, info: eInfo });
+    });
+  }
+
+  function buildEasel(posterTex) {
+    const g = new THREE.Group();
+    const wood = mat.goldSoft;
+    [-0.42, 0.42].forEach((x) => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 2.2, 8), wood);
+      leg.position.set(x, 1.05, 0.06);
+      leg.rotation.z = -x * 0.12;
+      leg.rotation.x = -0.1;
+      g.add(leg);
+    });
+    const back = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 2.1, 8), wood);
+    back.position.set(0, 1.0, -0.28);
+    back.rotation.x = 0.28;
+    const ledge = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.04, 0.12), wood);
+    ledge.position.set(0, 0.58, 0.12);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.18, 1.6, 0.04), mat.gold);
+    frame.position.set(0, 1.4, 0.09);
+    frame.rotation.x = -0.1;
+    const poster = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.5), new THREE.MeshStandardMaterial({
+      map: posterTex, emissive: 0xffffff, emissiveMap: posterTex, emissiveIntensity: 0.55, roughness: 0.7
+    }));
+    poster.position.set(0, 1.4, 0.115);
+    poster.rotation.x = -0.1;
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), poolMat(0xffb36b, 0.4));
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.set(0, 0.01, 0.4);
+    g.add(back, ledge, frame, poster, pool);
+    return g;
   }
 
   /* ---------- colonnade along the hall ---------- */
   const bannerSets = [['Virtual', 'Book', 'Fair'], ['Speak', 'Your', 'Book'], ['Life', 'Coach', 'Code']];
   const bannerTex = bannerSets.map((w) => T.bannerTexture(w));
-  for (let i = 0; i < 8; i++) {
+  const COLS = Math.ceil((-6 - STAGE_Z) / 10) + 1;
+  for (let i = 0; i < COLS; i++) {
     const z = -6 - i * 10;
     [-1, 1].forEach((side) => {
       const x = side * 7.6;
       const c = new THREE.Mesh(colGeo, mat.marble);
       c.position.set(x, 0, z);
       scene.add(c);
-      if (i < 7) {
+      if (i < COLS - 1) {
         const arc = new THREE.Mesh(new THREE.TorusGeometry(5, 0.24, 12, 48, Math.PI), mat.marble);
         arc.rotation.y = Math.PI / 2;
         arc.position.set(x, 6.5, z - 5);
@@ -391,14 +613,14 @@ export async function createWorld(opts) {
         scene.add(banner);
         addFairy(catenary(new V3(x, 6.3, z), new V3(x, 6.3, z - 10), 1.1, 30));
       }
-      if (i % 2 === 0 && i < 7) {
+      if (i % 2 === 0 && i < COLS - 1) {
         addFairy(catenary(new V3(-7.6, 6.4, z), new V3(7.6, 6.4, z), 1.6, 46));
       }
     });
   }
 
   /* ---------- floating lanterns ---------- */
-  const lanternCount = 30;
+  const lanternCount = Math.max(12, Math.floor((-2 - STAGE_Z) / 2.5));
   const lanterns = new THREE.InstancedMesh(
     new THREE.SphereGeometry(0.12, 16, 12),
     new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.6, 0.28).multiplyScalar(4.2) }),
@@ -424,7 +646,6 @@ export async function createWorld(opts) {
   /* ---------- booths ---------- */
   const props = createProps({ mat, pointsMaterial, pointMats, radial: tex.radial, camera, lowEnd });
   const PROP_AT = new V3(1.5, 0, 0.12);
-  const poolMat = (color, opacity = 0.5) => new THREE.MeshBasicMaterial({ map: tex.radial, color: new THREE.Color(color), transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
   const pedGeo = new RoundedBoxGeometry(0.78, 1.05, 0.78, 4, 0.035);
   const trimGeo = new THREE.BoxGeometry(0.86, 0.05, 0.86);
   const backGeo = new RoundedBoxGeometry(1.95, 3.05, 0.08, 2, 0.02);
@@ -476,6 +697,59 @@ export async function createWorld(opts) {
     g.add(back, pages, spine, hinge);
     [back, pages, spine, cover].forEach((m) => { m.castShadow = Q.shadows; });
     return { group: g, hinge, w, h, d, front, inside, endpaper, meshes: [back, pages, spine, cover] };
+  }
+
+  /* the author of every book, waiting beside the booth as a hologram */
+  const holoGeo = bustGeometry();
+  const holoParts = {
+    pillar: new THREE.CylinderGeometry(0.08, 0.12, 0.92, 20),
+    disc: new THREE.CylinderGeometry(0.15, 0.15, 0.03, 32),
+    beam: new THREE.CylinderGeometry(0.11, 0.42, 0.62, 24, 1, true).rotateX(Math.PI)
+  };
+  const holoMats = [];
+  const authorOf = {};
+  authors.forEach((a) => a.books.forEach((slug) => { authorOf[slug] = a; }));
+  const tagCache = new Map();
+  const tagTexture = (name, sub, o) => {
+    const key = `${name}|${sub}|${o && o.author ? 1 : 0}`;
+    if (!tagCache.has(key)) tagCache.set(key, T.nameTagTexture(name, sub, o));
+    return tagCache.get(key);
+  };
+  function buildHolo(author, book) {
+    const g = new THREE.Group();
+    const m = holoMaterial(new THREE.Color(1.0, 0.72, 0.38), 0.9);
+    holoMats.push(m);
+    const bust = new THREE.Mesh(holoGeo, m);
+    bust.position.y = 1.15;
+    const pillar = new THREE.Mesh(holoParts.pillar, mat.gold);
+    pillar.position.y = 0.46;
+    const discMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.8, 0.5).multiplyScalar(2.2) });
+    const disc = new THREE.Mesh(holoParts.disc, discMat);
+    disc.position.y = 0.935;
+    const beamMat = coneMaterial(0xffe2b0, 0.2);
+    const beam = new THREE.Mesh(holoParts.beam, beamMat);
+    beam.position.y = 1.25;
+    const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTexture(author.name, 'Meet the author'), transparent: true, depthWrite: false }));
+    tag.scale.set(0.98, 0.98 * 168 / 640, 1);
+    tag.position.y = 2.14;
+    g.add(pillar, disc, beam, bust, tag);
+    const info = { kind: 'author', id: author.id, slug: book.slug };
+    [bust, pillar, tag].forEach((o) => { o.userData.info = info; clickables.push(o); });
+    const phase = Math.random() * 6.28;
+    const h = { group: g, info, online: 0, onlineT: 0, author };
+    h.setOnline = (on) => {
+      h.online = on ? 1 : 0;
+      tag.material.map = tagTexture(author.name, on ? '\u25cf Here now' : 'Meet the author', { author: on });
+      tag.material.needsUpdate = true;
+    };
+    h.update = (t, dt) => {
+      h.onlineT = damp(h.onlineT, h.online, 3, dt);
+      bust.rotation.y = Math.sin(t * 0.4 + phase) * 0.35;
+      bust.position.y = 1.15 + Math.sin(t * 1.1 + phase) * 0.015;
+      m.uniforms.uOpacity.value = 0.85 + 0.35 * h.onlineT;
+      beamMat.uniforms.uOpacity.value = 0.2 + 0.2 * h.onlineT;
+    };
+    return h;
   }
 
   const booths = books.map((book, k) => {
@@ -567,6 +841,19 @@ export async function createWorld(opts) {
     });
     booth.prop = prop;
     animated.push((t, dt) => { if (booth.awake) prop.update(t, dt); });
+    const author = authorOf[book.slug];
+    if (author) {
+      const holo = buildHolo(author, book);
+      const HOLO_AT = new V3(-1.32, 0, 0.3);
+      holo.group.position.copy(HOLO_AT);
+      group.add(holo.group);
+      group.updateMatrixWorld(true);
+      const w = group.localToWorld(HOLO_AT.clone());
+      colliders.push({ x: w.x, z: w.z, r: 0.22 });
+      interactables.push({ pos: group.localToWorld(new V3(HOLO_AT.x, 0, HOLO_AT.z + 0.5)), range: 2.5, info: holo.info });
+      booth.holo = holo;
+      animated.push((t, dt) => { if (booth.awake) holo.update(t, dt); });
+    }
     [[0, 0, soon ? 0.85 : 0.6], [-0.62, -0.98, 0.42], [0, -0.98, 0.42], [0.62, -0.98, 0.42]].forEach(([x, zz, r]) => {
       const w = group.localToWorld(new V3(x, 0, zz));
       colliders.push({ x: w.x, z: w.z, r });
@@ -735,7 +1022,7 @@ export async function createWorld(opts) {
         void main(){float life=(3.4+aSeed*1.8)/(1.0+uBoost*1.6);float t=fract(uTime/life+aSeed);
         vec3 ctrl=mix(uStart,aEnd,0.5)+vec3((aSeed-0.5)*2.4,1.3+aSeed*0.9,0.9);
         float e=t*t*(3.0-2.0*t);vec3 p=mix(mix(uStart,ctrl,e),mix(ctrl,aEnd,e),e);
-        vec4 mv=modelViewMatrix*vec4(p,1.0);gl_PointSize=(0.1+0.07*aSeed)*uScale/-mv.z;
+        vec4 mv=modelViewMatrix*vec4(p,1.0);gl_PointSize=min((0.1+0.07*aSeed)*uScale/max(-mv.z,0.05),96.0);
         vA=smoothstep(0.0,0.1,t)*(1.0-smoothstep(0.85,1.0,t))*(1.0+uBoost);vCell=vec2(mod(aGlyph,8.0),floor(aGlyph/8.0));gl_Position=projectionMatrix*mv;}`,
       fragmentShader: `uniform sampler2D uAtlas;uniform vec3 uColor;varying float vA;varying vec2 vCell;
         void main(){vec2 uv=vec2((vCell.x+gl_PointCoord.x)/8.0,1.0-(vCell.y+gl_PointCoord.y)/8.0);float a=texture2D(uAtlas,uv).a*vA;gl_FragColor=vec4(uColor,a);}`,
@@ -751,8 +1038,84 @@ export async function createWorld(opts) {
     pointMats.push(letterMat);
   }
 
+  /* ---------- the live event: screens beside the stage and seats for the audience ---------- */
+  const screens = [];
+  const seats = [];
+  {
+    const eInfo = { kind: 'event' };
+    const SW = 3.0, SH = 3.0 * 780 / 1280;
+    [-1, 1].forEach((side) => {
+      const g = new THREE.Group();
+      const x = side * 5.6, z = STAGE_Z + 0.4;
+      g.position.set(x, 0, z);
+      g.rotation.y = Math.atan2(-x, STAGE_Z + 10.6 - z);
+      const cnv = T.makeCanvas(1280, 780);
+      const st = T.toTexture(cnv);
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: st, color: new THREE.Color(1.05, 1.02, 1.0) }));
+      scr.position.set(0, 2.55, 0.05);
+      const bezel = new THREE.Mesh(new RoundedBoxGeometry(SW + 0.16, SH + 0.16, 0.08, 3, 0.03), mat.gold);
+      bezel.position.set(0, 2.55, 0);
+      g.add(bezel, scr);
+      [-1.15, 1.15].forEach((px) => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 1.7, 12), mat.gold);
+        post.position.set(px, 0.85, -0.02);
+        g.add(post);
+      });
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(SW * 1.9, SH * 2.2), new THREE.MeshBasicMaterial({ map: tex.radial, color: new THREE.Color(1.0, 0.62, 0.35), transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.position.set(0, 2.55, -0.1);
+      g.add(glow);
+      scene.add(g);
+      g.updateMatrixWorld(true);
+      [scr, bezel].forEach((m) => { m.userData.info = eInfo; clickables.push(m); });
+      [-1.15, 1.15].forEach((px) => { const w = g.localToWorld(new V3(px, 0, 0)); colliders.push({ x: w.x, z: w.z, r: 0.18 }); });
+      interactables.push({ pos: g.localToWorld(new V3(0, 0, 1.3)), range: 3.4, info: eInfo });
+      screens.push({ kind: side < 0 ? 'lineup' : 'countdown', canvas: cnv, tex: st });
+    });
+
+    // two blocks of velvet chairs, a centre aisle between them
+    const spots = [];
+    [STAGE_Z + 6.4, STAGE_Z + 7.6].forEach((z, r) => [1.45, 2.2, 2.95, 3.7].forEach((x) => [-1, 1].forEach((sd) => spots.push(new V3(sd * (x + r * 0.12), 0, z)))));
+    const n = spots.length;
+    const seatI = new THREE.InstancedMesh(new RoundedBoxGeometry(0.5, 0.09, 0.46, 2, 0.025), mat.velvetRed, n);
+    const backI = new THREE.InstancedMesh(new RoundedBoxGeometry(0.5, 0.52, 0.07, 2, 0.025), mat.velvetRed, n);
+    const legI = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.016, 0.012, 0.44, 6), mat.gold, n * 4);
+    const railI = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.016, 0.016, 0.54, 8), mat.gold, n);
+    const o = new THREE.Object3D();
+    const M = new THREE.Matrix4(), Mp = new THREE.Matrix4(), qY = new THREE.Quaternion(), ONE = new V3(1, 1, 1), UP = new V3(0, 1, 0);
+    const part = (mesh, idx, x, y, z, rx = 0, rz = 0) => {
+      o.position.set(x, y, z);
+      o.rotation.set(rx, 0, rz);
+      o.updateMatrix();
+      mesh.setMatrixAt(idx, Mp.copy(M).multiply(o.matrix));
+    };
+    spots.forEach((p, i) => {
+      const dx = -p.x, dz = (STAGE_Z - 1) - p.z;
+      const yaw = Math.atan2(-dx, -dz);
+      M.compose(p, qY.setFromAxisAngle(UP, yaw), ONE);
+      part(seatI, i, 0, 0.47, 0);
+      part(backI, i, 0, 0.78, 0.21, 0.12);
+      part(railI, i, 0, 1.05, 0.245, 0, Math.PI / 2);
+      [[-0.21, -0.19], [0.21, -0.19], [-0.21, 0.19], [0.21, 0.19]].forEach(([lx, lz], j) => part(legI, i * 4 + j, lx, 0.22, lz));
+      colliders.push({ x: p.x, z: p.z, r: 0.3 });
+      interactables.push({ pos: p.clone(), range: 1.7, info: { kind: 'seat', index: i } });
+      seats.push({ pos: p.clone(), yaw });
+    });
+    [seatI, backI, legI, railI].forEach((m) => { m.castShadow = false; m.receiveShadow = Q.shadows; scene.add(m); });
+    [seatI, backI].forEach((m) => { m.userData.info = { kind: 'seat', index: -1 }; m.userData.instanced = 'seat'; clickables.push(m); });
+  }
+
+  function drawScreens() {
+    if (!SIGNS.screens) return;
+    screens.forEach((sc) => {
+      T.drawEventScreen(sc.canvas, sc.kind, SIGNS.screens[sc.kind]);
+      sc.tex.needsUpdate = true;
+    });
+  }
+  drawScreens();
+
   /* ---------- the temple of Life Coach Code + the empty pedestal ---------- */
   let ghost = null;
+  const finale = {};
   {
     const g = new THREE.Group();
     const xs = [-5.4, -1.85, 1.85, 5.4];
@@ -825,6 +1188,7 @@ export async function createWorld(opts) {
     const l = new THREE.PointLight(0xffcf90, 12, 7, 1.8);
     l.position.set(0, 3.2, TEMPLE_Z + 2.6);
     g.add(ped, trim, plate, ghost, beam, pool, l);
+    Object.assign(finale, { group: g, plate, plateTex: plate.material.map, info: gInfo, pos: new V3(0, 0, TEMPLE_Z + 1.6) });
     animated.push((t) => {
       ghostMat.uniforms.uTime.value = t;
       ghost.rotation.y = Math.sin(t * 0.5) * 0.5;
@@ -846,6 +1210,48 @@ export async function createWorld(opts) {
     scene.add(g);
   }
 
+  /* ---------- the visitor's own book, placed on the empty pedestal ---------- */
+  let customBook = null;
+  function setCustomBook(spec) {
+    if (customBook) {
+      finale.group.remove(customBook.holder, customBook.stand);
+      customBook.bk.meshes.forEach((m) => { const i = clickables.indexOf(m); if (i >= 0) clickables.splice(i, 1); });
+      customBook.coverTex.dispose();
+      customBook = null;
+    }
+    if (!spec) {
+      ghost.visible = true;
+      finale.plate.material.map = finale.plateTex;
+      finale.plate.material.emissiveMap = finale.plateTex;
+      finale.plate.material.needsUpdate = true;
+      return;
+    }
+    const pseudo = { title: spec.title, author: spec.name || 'You', cover: { w: spec.canvas.width, h: spec.canvas.height }, colors: spec.colors };
+    const coverTex = T.toTexture(spec.canvas);
+    const bk = buildBook(pseudo, coverTex);
+    const holder = new THREE.Group();
+    holder.add(bk.group);
+    const base = new V3(0, 1.09 + (bk.h / 2) * Math.cos(0.2) + 0.012, TEMPLE_Z + 1.6 + 0.03);
+    holder.position.copy(base);
+    holder.rotation.x = -0.2;
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.5, 0.02), mat.gold);
+    stand.position.set(0, 1.32, TEMPLE_Z + 1.6 - 0.12);
+    stand.rotation.x = -0.34;
+    finale.group.add(holder, stand);
+    bk.meshes.forEach((m) => { m.userData.info = finale.info; clickables.push(m); });
+    ghost.visible = false;
+    const pt = T.plateTexture([spec.title, spec.name ? 'by ' + spec.name : 'Your book']);
+    finale.plate.material.map = pt;
+    finale.plate.material.emissiveMap = pt;
+    finale.plate.material.needsUpdate = true;
+    customBook = { holder, stand, bk, coverTex, base, phase: 0 };
+  }
+  animated.push((t) => {
+    if (!customBook) return;
+    customBook.holder.position.y = customBook.base.y + Math.sin(t * 0.8) * 0.008;
+    customBook.holder.rotation.y = Math.sin(t * 0.45) * 0.08;
+  });
+
   /* ---------- fairy lights + dust ---------- */
   {
     const fg = new THREE.BufferGeometry();
@@ -859,7 +1265,7 @@ export async function createWorld(opts) {
 
     const dg = new THREE.BufferGeometry();
     const dp = [], ds = [];
-    for (let i = 0; i < Q.dust; i++) { dp.push((Math.random() - 0.5) * 16, Math.random() * 9, 14 - Math.random() * 110); ds.push(Math.random()); }
+    for (let i = 0; i < Q.dust; i++) { dp.push((Math.random() - 0.5) * 16, Math.random() * 9, 14 - Math.random() * (19 - TEMPLE_Z)); ds.push(Math.random()); }
     dg.setAttribute('position', new THREE.Float32BufferAttribute(dp, 3));
     dg.setAttribute('aSeed', new THREE.Float32BufferAttribute(ds, 1));
     const dm = pointsMaterial(0xffd9a8, { size: 0.035, alpha: 0.55, rise: 1, height: 9 });
@@ -870,29 +1276,140 @@ export async function createWorld(opts) {
   }
   pointMats.push(haloMat);
 
+  /* ---------- other visitors and authors, walking the fair live ---------- */
+  const MAX_PEERS = lowEnd ? 20 : 48;
+  const peerMat = holoMaterial(new THREE.Color(1, 1, 1), 0.95);
+  holoMats.push(peerMat);
+  const peerMesh = new THREE.InstancedMesh(holoGeo, peerMat, MAX_PEERS);
+  peerMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PEERS * 3), 3);
+  peerMesh.count = 0;
+  peerMesh.frustumCulled = false;
+  const peerGlow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.3, 1.3).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({
+    map: tex.radial, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false
+  }), MAX_PEERS);
+  peerGlow.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PEERS * 3), 3);
+  peerGlow.count = 0;
+  peerGlow.frustumCulled = false;
+  scene.add(peerMesh, peerGlow);
+  const peers = new Map();
+  const emotes = [];
+  const GOLD_PEER = new THREE.Color(1.0, 0.8, 0.45);
+  function setPeers(list) {
+    const seen = new Set();
+    list.forEach((d) => {
+      seen.add(d.id);
+      let p = peers.get(d.id);
+      if (!p) {
+        p = { id: d.id, pos: new V3(d.x, 0, d.z), yaw: d.yaw || 0, color: new THREE.Color(), phase: Math.random() * 6.28, key: '', tag: null, info: { kind: 'peer', id: d.id } };
+        p.tag = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false }));
+        scene.add(p.tag);
+        peers.set(d.id, p);
+      }
+      p.tx = d.x;
+      p.tz = d.z;
+      p.tyaw = d.yaw || 0;
+      p.seated = !!d.seated;
+      p.author = d.author || null;
+      Object.assign(p.info, { name: d.name, author: d.author || null });
+      const key = `${d.name}|${p.author ? p.author.id : ''}`;
+      if (p.key !== key) {
+        p.key = key;
+        p.tag.material.map = p.author ? tagTexture(p.author.name, '\u2726 Author \u00b7 here now', { author: true }) : tagTexture(d.name || 'Visitor', '');
+        p.tag.material.needsUpdate = true;
+        const s = p.author ? 1.0 : 0.82;
+        p.tag.scale.set(s, s * 168 / 640, 1);
+      }
+      if (p.author) p.color.copy(GOLD_PEER);
+      else p.color.setHSL(((d.hue || 0) % 360) / 360, 0.65, 0.7);
+    });
+    peers.forEach((p, id) => {
+      if (seen.has(id)) return;
+      scene.remove(p.tag);
+      p.tag.material.dispose();
+      peers.delete(id);
+    });
+  }
+  function peerEmote(id, emoji) {
+    const p = peers.get(id);
+    if (!p) return;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: T.emoteTexture(emoji), transparent: true, depthWrite: false }));
+    sp.scale.set(0.5, 0.5, 1);
+    scene.add(sp);
+    emotes.push({ sp, peer: p, t: 0, dx: (Math.random() - 0.5) * 0.3 });
+  }
+  const peerList = [];
+  function updatePeers(t, dt) {
+    peerList.length = 0;
+    peers.forEach((p) => {
+      p.pos.x = damp(p.pos.x, p.tx, 4, dt);
+      p.pos.z = damp(p.pos.z, p.tz, 4, dt);
+      let dy = p.tyaw - p.yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      p.yaw += dy * (1 - Math.exp(-4 * dt));
+      p.dist = Math.hypot(p.pos.x - player.pos.x, p.pos.z - player.pos.z);
+      peerList.push(p);
+    });
+    if (peerList.length > MAX_PEERS) peerList.sort((a, b) => a.dist - b.dist);
+    let i = 0;
+    peerList.forEach((p) => {
+      if (i >= MAX_PEERS || p.dist > 60) { p.tag.visible = false; p.y = null; return; }
+      p.y = (p.seated ? 0.5 : 0.96) + Math.sin(t * 1.3 + p.phase) * 0.03;
+      dummy.position.set(p.pos.x, p.y, p.pos.z);
+      dummy.rotation.set(0, p.yaw, 0);
+      dummy.scale.setScalar(p.author ? 1.06 : 1);
+      dummy.updateMatrix();
+      peerMesh.setMatrixAt(i, dummy.matrix);
+      peerMesh.setColorAt(i, p.color);
+      dummy.position.y = 0.02;
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.setScalar(1);
+      dummy.updateMatrix();
+      peerGlow.setMatrixAt(i, dummy.matrix);
+      peerGlow.setColorAt(i, p.color);
+      p.tag.position.set(p.pos.x, p.y + 0.98, p.pos.z);
+      p.tag.visible = p.dist < 22;
+      i++;
+    });
+    peerMesh.count = peerGlow.count = i;
+    [peerMesh, peerGlow].forEach((m) => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+    for (let k = emotes.length - 1; k >= 0; k--) {
+      const e = emotes[k];
+      e.t += dt;
+      const y = e.peer.y == null ? 1.0 : e.peer.y;
+      e.sp.position.set(e.peer.pos.x + e.dx, y + 1.2 + e.t * 0.45, e.peer.pos.z);
+      e.sp.material.opacity = Math.min(1, e.t * 4) * (1 - smooth(1.6, 2.6, e.t));
+      const sc = 0.42 + Math.min(1, e.t * 3) * 0.12;
+      e.sp.scale.set(sc, sc, 1);
+      if (e.t > 2.6 || !peers.has(e.peer.id)) { scene.remove(e.sp); e.sp.material.dispose(); emotes.splice(k, 1); }
+    }
+  }
+
   /* ---------- places (map stops) ---------- */
   const places = [];
   const addPlace = (id, label, pos, lookAt, extra = {}) => places.push({ id, label, pos, look: lookAt, ...extra });
-  addPlace('welcome', 'Entrance', new V3(0, 0, 15), new V3(0, 4.4, 0));
+  addPlace('welcome', 'Entrance', new V3(0, 0, 19), new V3(0, 5.6, 0), { lookPortrait: new V3(0, 11.2, 0) });
   addPlace('hall', 'The Grand Hall', new V3(0, 0, -1.5), new V3(0, 1.4, -30));
   {
     const F = new V3(0, 0, 1).applyQuaternion(oracle.quaternion);
     addPlace('oracle', 'The Book Oracle', ORACLE_POS.clone().addScaledVector(F, 2.4), ORACLE_POS.clone().add(new V3(0, 1.0, 0)));
   }
   booths.forEach((b) => {
+    // wide screens: the author's hologram, the book and the themed piece; phones: the book and the piece
     const F = boothDir(b);
-    const center = boothWorld(b, new V3(0.95, 1.2, 0));
-    const p = center.clone().addScaledVector(F, 4.1);
+    const center = boothWorld(b, new V3(b.holo ? 0.2 : 0.95, 1.25, 0));
+    const p = center.clone().addScaledVector(F, b.holo ? 4.5 : 4.1);
     p.y = 0;
-    addPlace('book-' + b.book.slug, b.book.title, p, center, { booth: b });
+    const narrow = boothWorld(b, new V3(0.95, 1.2, 0));
+    narrow.y += narrow.distanceTo(p) * 0.07;
+    addPlace('book-' + b.book.slug, b.book.title, p, center, { booth: b, lookPortrait: narrow });
   });
-  addPlace('speak', 'Speak Your Book', new V3(0, 0, STAGE_Z + 8.2), new V3(0, 2.5, STAGE_Z - 3));
+  addPlace('speak', 'Speak Your Book', new V3(0, 0, STAGE_Z + 10.6), new V3(0, 2.6, STAGE_Z - 2), { shift: 0.35 });
   addPlace('about', 'Life Coach Code', new V3(0, 0, TEMPLE_Z + 9.6), new V3(0, 2.9, TEMPLE_Z));
   addPlace('finale', 'Your book here', new V3(0, 0, TEMPLE_Z + 5.2), new V3(0, 1.5, TEMPLE_Z + 1.6));
 
   /* ---------- player ---------- */
   const EYE = 1.65;
-  const player = { pos: new V3(0, 0, 15), vel: new V3(), yaw: 0, pitch: 0.12, yawT: 0, pitchT: 0.12, ground: 0, bob: 0, bobAmp: 0 };
+  const player = { pos: new V3(0, 0, 19), vel: new V3(), yaw: 0, pitch: 0.12, yawT: 0, pitchT: 0.12, ground: 0, bob: 0, bobAmp: 0, eye: EYE, seated: false };
   const keys = Object.create(null);
   const joy = { x: 0, y: 0 };
   let inputEnabled = true, travel = null, pendingPlace = null;
@@ -901,7 +1418,7 @@ export async function createWorld(opts) {
     return { yaw: Math.atan2(-d.x, -d.z), pitch: Math.atan2(d.y, Math.hypot(d.x, d.z)) };
   };
   {
-    const yp = yawPitchTo(new V3(0, EYE, 15), framedLook(places[0], new V3(0, EYE, 15)));
+    const yp = yawPitchTo(new V3(0, EYE, 19), framedLook(places[0], new V3(0, EYE, 19)));
     player.yaw = player.yawT = yp.yaw;
     player.pitch = player.pitchT = yp.pitch;
   }
@@ -934,15 +1451,20 @@ export async function createWorld(opts) {
     const d = look.clone().sub(eye);
     const dist = d.length();
     const isPortrait = window.innerWidth / window.innerHeight < 0.85;
+    if (isPortrait && place.lookPortrait) return place.lookPortrait.clone();
     if (isPortrait) return look.add(new V3(0, dist * 0.07, 0));
     if (window.innerWidth < 900) return look;
+    // turn just enough that the subject sits in the middle of the space the card leaves free
+    const tanH = Math.tan(THREE.MathUtils.degToRad(56) / 2) * (window.innerWidth / window.innerHeight);
+    const k = (place.shift != null ? place.shift : 1) * leftInset() * tanH;
     const right = new V3().crossVectors(d.normalize(), new V3(0, 1, 0)).normalize();
-    return look.addScaledVector(right, -dist * 0.2);
+    return look.addScaledVector(right, -dist * k);
   }
 
   function travelTo(id, { instant = false } = {}) {
-    const place = places.find((p) => p.id === id);
+    const place = typeof id === 'object' ? id : places.find((p) => p.id === id);
     if (!place) return;
+    player.seated = false;
     const eye = new V3(place.pos.x, groundAt(place.pos.x, place.pos.z) + EYE, place.pos.z);
     const yp = yawPitchTo(eye, framedLook(place, eye));
     if (instant) {
@@ -961,8 +1483,27 @@ export async function createWorld(opts) {
       from: player.pos.clone(), to: place.pos.clone(),
       ctrl: new V3(0, 0, (player.pos.z + place.pos.z) / 2),
       yaw0: player.yaw, yaw1: player.yaw + dy, pitch0: player.pitch, pitch1: yp.pitch,
-      t: 0, dur: reduceMotion ? 0.01 : Math.min(4.2, Math.max(1.3, dist / 11)), lift: Math.min(2.2, dist * 0.04)
+      t: 0, dur: reduceMotion ? 0.01 : Math.min(4.2, Math.max(place.minDur || 1.3, dist / 11)), lift: Math.min(2.2, dist * 0.04), seat: place.seat
     };
+  }
+
+  // walk to a point beside someone (or something) and turn to face it
+  function travelNear(x, z, lookY = 1.5) {
+    const to = new V3(x, 0, z);
+    const from = player.pos.clone();
+    const d = from.clone().sub(to);
+    d.y = 0;
+    if (d.length() < 0.01) d.set(0, 0, 1);
+    d.normalize();
+    const pos = to.clone().addScaledVector(d, 2.2);
+    collide(pos);
+    travelTo({ id: 'near', pos, look: new V3(x, lookY, z) });
+  }
+
+  function sit(i) {
+    const s = seats[i];
+    if (!s) return;
+    travelTo({ id: 'seat', pos: s.pos.clone(), look: new V3(0, 2.2, STAGE_Z - 1), seat: true, minDur: 0.8 });
   }
 
   function updatePlayer(dt) {
@@ -979,7 +1520,11 @@ export async function createWorld(opts) {
       player.yaw = player.yawT = travel.yaw0 + (travel.yaw1 - travel.yaw0) * e;
       player.pitch = player.pitchT = travel.pitch0 + (travel.pitch1 - travel.pitch0) * e;
       player.vel.set(0, 0, 0);
-      if (travel.t >= 1) { travel = null; player.liftY = 0; }
+      if (travel.t >= 1) {
+        if (travel.seat) player.seated = true;
+        travel = null;
+        player.liftY = 0;
+      }
     } else {
       player.liftY = 0;
       const active = inputEnabled && !focus && introT >= 1;
@@ -990,6 +1535,7 @@ export async function createWorld(opts) {
         turn = (keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0);
       }
       player.yawT += turn * 1.9 * dt;
+      if (player.seated && (fw || st)) player.seated = false;
       const len = Math.hypot(fw, st);
       if (len > 1) { fw /= len; st /= len; }
       const run = keys.ShiftLeft || keys.ShiftRight;
@@ -1001,7 +1547,7 @@ export async function createWorld(opts) {
       player.vel.z = damp(player.vel.z, wantZ, 9, dt);
       player.pos.x += player.vel.x * dt;
       player.pos.z += player.vel.z * dt;
-      collide(player.pos);
+      if (!player.seated) collide(player.pos);
       const sp = Math.hypot(player.vel.x, player.vel.z);
       player.bob += sp * dt * 2.1;
       player.bobAmp = damp(player.bobAmp, Math.min(1, sp / 3.4), 6, dt);
@@ -1010,6 +1556,7 @@ export async function createWorld(opts) {
     player.yaw = damp(player.yaw, player.yawT, 16, dt);
     player.pitch = damp(player.pitch, player.pitchT, 16, dt);
     player.ground = damp(player.ground, groundAt(player.pos.x, player.pos.z), 8, dt);
+    player.eye = damp(player.eye, player.seated ? 1.16 : EYE, 4, dt);
   }
   let movedOnce = false;
 
@@ -1023,6 +1570,7 @@ export async function createWorld(opts) {
     // nearest interactable you are facing
     let best = null, bestScore = Infinity;
     interactables.forEach((it) => {
+      if (player.seated && it.info.kind === 'seat') return;
       const dx = it.pos.x - p.x, dz = it.pos.z - p.z;
       const d = Math.hypot(dx, dz);
       if (d > it.range) return;
@@ -1030,6 +1578,20 @@ export async function createWorld(opts) {
       if (facing < 0.35 && d > 1.4) return;
       const score = d - facing * 1.2;
       if (score < bestScore) { bestScore = score; best = it; }
+    });
+    peers.forEach((pr) => {
+      if (pr.y == null) return;
+      const dx = pr.pos.x - p.x, dz = pr.pos.z - p.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 3.4) return;
+      const facing = (dx * fwd.x + dz * fwd.z) / (d || 1);
+      if (facing < 0.5) return;
+      const score = d - facing * 1.2 - 0.6;
+      if (score < bestScore) {
+        bestScore = score;
+        pr.it = pr.it || { info: pr.info };
+        best = pr.it;
+      }
     });
     if (best !== near) { near = best; onNear(near ? near.info : null); }
     // which card to show
@@ -1041,17 +1603,18 @@ export async function createWorld(opts) {
       const d = Math.hypot(dx, dz);
       if (d > 5.4) return;
       const facing = (dx * fwd.x + dz * fwd.z) / (d || 1);
-      if (facing < -0.25 && d > 2.5) return;
+      if (facing < 0.05 && d > 3) return;
       const s = d - facing * 1.6;
       if (s < bzScore) { bzScore = s; bz = b; }
     });
-    if (bz) z = 'book-' + bz.book.slug;
+    if (player.seated) z = 'event';
+    else if (bz) z = 'book-' + bz.book.slug;
     else if (p.distanceTo(ORACLE_POS) < 4.6) z = 'oracle';
     else if (p.z > 0.6) z = 'welcome';
     else if (p.z > -6.5) z = 'hall';
     else if (Math.hypot(p.x, p.z - (TEMPLE_Z + 1.6)) < 4.6) z = 'finale';
     else if (p.z < STAGE_Z - 4.4) z = 'about';
-    else if (p.z < -66) z = 'speak';
+    else if (p.z < STAGE_Z + 11.5) z = 'speak';
     else z = 'hall';
     if (z !== zone) { zone = z; onZone(zone); }
   }
@@ -1085,7 +1648,7 @@ export async function createWorld(opts) {
   function updateCamera(dt) {
     portrait = window.innerWidth / window.innerHeight < 0.85;
     const bob = reduceMotion ? 0 : Math.sin(player.bob * 2) * 0.03 * player.bobAmp;
-    tmpPos.set(player.pos.x, player.ground + EYE + bob + (player.liftY || 0), player.pos.z);
+    tmpPos.set(player.pos.x, player.ground + player.eye + bob + (player.liftY || 0), player.pos.z);
     euler.set(player.pitch, player.yaw, Math.sin(player.bob) * 0.004 * player.bobAmp);
     camQ.setFromEuler(euler);
 
@@ -1134,7 +1697,99 @@ export async function createWorld(opts) {
       b.holder.quaternion.copy(b.restQuat).slerp(IDENTITY, p);
       if (!reduceMotion) b.holder.rotateY(Math.sin(t * 0.45 + b.phase) * 0.05 * (1 - p) + b.hover * 0.12);
       b.bk.hinge.rotation.y = -2.72 * open;
+      if (b.turn) updateTurn(b, dt);
+      else if (b !== focus && b.spread && b.present < 0.3) resetPages(b);
     });
+  }
+
+  /* ---------- look inside: turn the pages of the open book ---------- */
+  function pageTex(b, i) {
+    b.pageCache = b.pageCache || new Map();
+    if (!b.pageCache.has(i)) {
+      const spec = b.pageSpecs[i];
+      const t = T.bookPageTexture(b.book, spec.kind === 'image' ? { kind: 'blank' } : spec, i);
+      if (spec.kind === 'image') {
+        const im = new Image();
+        im.onload = () => { const full = T.bookPageTexture(b.book, spec, i, im); t.image = full.image; t.needsUpdate = true; };
+        im.src = spec.src;
+      }
+      b.pageCache.set(i, t);
+    }
+    return b.pageCache.get(i);
+  }
+  const leftOf = (b, s) => (s === 0 ? b.endTex : pageTex(b, 2 * s - 1));
+  const rightOf = (b, s) => pageTex(b, 2 * s);
+  function setPage(m, t) { m.map = t; m.needsUpdate = true; }
+  function makeLeaf(b) {
+    const w = b.bk.w - 0.014, h = b.bk.h - 0.016;
+    const front = new THREE.PlaneGeometry(w, h, 16, 1).translate(w / 2, 0, 0);
+    const back = front.clone();
+    const uv = back.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setX(i, 1 - uv.getX(i));
+    const fm = new THREE.MeshStandardMaterial({ map: b.endTex, roughness: 0.85 });
+    const bm = new THREE.MeshStandardMaterial({ map: b.endTex, roughness: 0.85, side: THREE.BackSide });
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(front, fm), new THREE.Mesh(back, bm));
+    g.position.set(-b.bk.w / 2 + 0.01, 0, b.bk.d / 2 - 0.006);
+    g.visible = false;
+    b.bk.group.add(g);
+    b.leaf = { group: g, front, back, fm, bm, w, base: front.attributes.position.array.slice() };
+    g.children.forEach((m) => { m.userData.info = b.info; m.userData.page = b; });
+  }
+  function bendLeaf(b, amount) {
+    const L = b.leaf;
+    [L.front, L.back].forEach((geo) => {
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = L.base[i * 3];
+        pos.setZ(i, Math.sin((x / L.w) * Math.PI) * amount + (x / L.w) * (x / L.w) * amount * 0.5);
+      }
+      pos.needsUpdate = true;
+    });
+  }
+  // the leaf lands just above the open cover, wherever the cover is
+  const leafOpen = (b) => b.bk.hinge.rotation.y + 0.06;
+  function turnPage(dir) {
+    const b = focus;
+    if (!dir || !b || b.turn || b.present < 0.8) return null;
+    const next = b.spread + dir;
+    if (next < 0 || next >= b.spreads) return null;
+    if (!b.leaf) makeLeaf(b);
+    const L = b.leaf;
+    if (dir > 0) {
+      setPage(L.fm, rightOf(b, b.spread));
+      setPage(L.bm, leftOf(b, next));
+      setPage(b.bk.inside, rightOf(b, next));
+    } else {
+      setPage(L.fm, rightOf(b, next));
+      setPage(L.bm, leftOf(b, b.spread));
+      setPage(b.bk.endpaper, leftOf(b, next));
+    }
+    L.group.visible = true;
+    L.group.rotation.y = dir > 0 ? 0 : leafOpen(b);
+    b.turn = { t: 0, dir, to: next };
+    return { spread: next, spreads: b.spreads };
+  }
+  function updateTurn(b, dt) {
+    const tr = b.turn;
+    tr.t = Math.min(1, tr.t + dt / (reduceMotion ? 0.05 : 0.9));
+    const e = easeInOut(tr.t);
+    b.leaf.group.rotation.y = tr.dir > 0 ? leafOpen(b) * e : leafOpen(b) * (1 - e);
+    bendLeaf(b, Math.sin(e * Math.PI) * 0.06);
+    if (tr.t < 1) return;
+    if (tr.dir > 0) setPage(b.bk.endpaper, leftOf(b, tr.to));
+    else setPage(b.bk.inside, rightOf(b, tr.to));
+    b.spread = tr.to;
+    b.leaf.group.visible = false;
+    b.turn = null;
+  }
+  function resetPages(b) {
+    b.spread = 0;
+    setPage(b.bk.inside, rightOf(b, 0));
+    setPage(b.bk.endpaper, b.endTex);
+    if (b.leaf) b.leaf.group.visible = false;
+    // keep only the title page in memory
+    b.pageCache.forEach((t, i) => { if (i !== 0) { t.dispose(); b.pageCache.delete(i); } });
   }
 
   function nearestBoothTo(p) {
@@ -1171,6 +1826,7 @@ export async function createWorld(opts) {
 
   /* ---------- only animate what is near, and sharpen covers as you approach ---------- */
   let wakeTick = 0;
+  const captureWaiters = [];
   function wakeBooths(force) {
     if (!force && ++wakeTick % 10 && wakeTick > 2) return;
     const p = focus ? boothWorld(focus, new V3()) : player.pos;
@@ -1178,6 +1834,7 @@ export async function createWorld(opts) {
       const d = b.group.position.distanceTo(p);
       b.awake = d < 26;
       b.prop.group.visible = d < 34;
+      if (b.holo) b.holo.group.visible = d < 34;
       if (d < 7 && !lowEnd) loadHD(b);
     });
   }
@@ -1232,10 +1889,20 @@ export async function createWorld(opts) {
     sky.update(elapsed, camera);
     grade.uniforms.uTime.value = elapsed;
     wakeBooths();
+    updatePeers(elapsed, dt);
+    holoMats.forEach((m) => { m.uniforms.uTime.value = elapsed; });
     animated.forEach((fn) => fn(elapsed, dt));
     pointMats.forEach((m) => { m.uniforms.uTime.value = elapsed; });
     renderer.info.reset();
     composer.render(dt);
+    if (captureWaiters.length) {
+      // the drawing buffer is only valid until this task ends: copy it now
+      const c = document.createElement('canvas');
+      c.width = canvas.width;
+      c.height = canvas.height;
+      c.getContext('2d').drawImage(canvas, 0, 0);
+      captureWaiters.splice(0).forEach((fn) => fn(c));
+    }
     checkPerf(dt);
     requestAnimationFrame(frame);
   }
@@ -1280,7 +1947,19 @@ export async function createWorld(opts) {
     ray.setFromCamera(ndc, camera);
     const hit = ray.intersectObjects(clickables, false)[0];
     if (!hit || hit.distance > 18) return null;
+    if (hit.object.userData.instanced === 'seat') return { kind: 'seat', index: hit.instanceId };
     return hit.object.userData.info || null;
+  }
+  function pickPage(clientX, clientY) {
+    const b = focus;
+    if (!b || b.present < 0.8) return 0;
+    ndc.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const targets = [...b.bk.meshes, ...(b.leaf ? b.leaf.group.children : [])];
+    const hit = ray.intersectObjects(targets, false)[0];
+    if (!hit) return 0;
+    const local = b.bk.group.worldToLocal(hit.point.clone());
+    return local.x > -b.bk.w / 2 ? 1 : -1;
   }
   let hoverQueued = 0;
   canvas.addEventListener('pointerdown', (e) => {
@@ -1328,6 +2007,11 @@ export async function createWorld(opts) {
     const wasDrag = drag.active;
     drag.active = false;
     canvas.style.cursor = 'grab';
+    if (focus && !wasDrag && e.type !== 'pointercancel') {
+      const dir = pickPage(e.clientX, e.clientY);
+      if (dir) { const r = turnPage(dir); if (r) onPage(r); }
+      return;
+    }
     if (wasDrag || e.type === 'pointercancel' || !inputEnabled || introT < 1) return;
     const info = pick(e.clientX, e.clientY);
     if (info) onSelect(info);
@@ -1345,10 +2029,12 @@ export async function createWorld(opts) {
   function prepareBooth(b) {
     if (!b.pagesReady) {
       b.pagesReady = true;
-      b.bk.inside.map = T.insidePageTexture(b.book);
-      b.bk.inside.needsUpdate = true;
-      b.bk.endpaper.map = T.endpaperTexture(b.book);
-      b.bk.endpaper.needsUpdate = true;
+      b.pageSpecs = T.bookPageSpecs(b.book);
+      b.spreads = 1 + (b.pageSpecs.length - 1) / 2;
+      b.spread = 0;
+      b.endTex = T.endpaperTexture(b.book);
+      setPage(b.bk.inside, rightOf(b, 0));
+      setPage(b.bk.endpaper, b.endTex);
     }
     loadHD(b);
   }
@@ -1374,11 +2060,31 @@ export async function createWorld(opts) {
       if (b) { hovered = null; onHover(null); }
     },
     setMove(x, y) { joy.x = x; joy.y = y; if ((x || y) && travel) travel = null; },
+    travelNear,
+    sit,
+    isTraveling: () => !!travel,
+    turnPage(dir) { const r = turnPage(dir); if (r) onPage(r); return r; },
+    pageInfo: () => (focus && focus.pagesReady ? { spread: focus.spread, spreads: focus.spreads } : null),
+    setPeers,
+    peerEmote,
+    peerPos(id) { const p = peers.get(id); return p ? { x: p.pos.x, z: p.pos.z } : null; },
+    setAuthorOnline(id, on) { booths.forEach((b) => { if (b.holo && b.holo.info.id === id) b.holo.setOnline(on); }); },
+    setCustomBook,
+    setScreens(data) { SIGNS.screens = data; drawScreens(); },
+    capture: () => new Promise((res) => { captureWaiters.push(res); }),
+    playerState: () => ({ x: +player.pos.x.toFixed(2), z: +player.pos.z.toFixed(2), yaw: +player.yaw.toFixed(2), seated: player.seated }),
+    listener() {
+      const f = new V3(0, 0, -1).applyQuaternion(camera.quaternion);
+      const u = new V3(0, 1, 0).applyQuaternion(camera.quaternion);
+      return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fx: f.x, fy: f.y, fz: f.z, ux: u.x, uy: u.y, uz: u.z };
+    },
+    soundAnchors: () => booths.map((b) => { const w = b.prop.group.getWorldPosition(new V3()); return { slug: b.book.slug, x: w.x, y: 1.2, z: w.z }; }),
     setInputEnabled(v) { inputEnabled = v; if (!v) Object.keys(keys).forEach((k) => { keys[k] = false; }); },
     near: () => (near ? near.info : null),
     zone: () => zone,
     pulse(kind) { if (kind === 'stage') stageBoost = 1; },
-    stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries, player: player.pos.toArray().map((v) => +v.toFixed(2)), zone, near: near ? near.info : null }),
-    quality: Q
+    stats: () => ({ book: focus ? { present: +focus.present.toFixed(3), hinge: +focus.bk.hinge.rotation.y.toFixed(3), spread: focus.spread, turning: !!focus.turn, leaf: focus.leaf ? { visible: focus.leaf.group.visible, rot: +focus.leaf.group.rotation.y.toFixed(3) } : null } : null, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries, player: player.pos.toArray().map((v) => +v.toFixed(2)), zone, near: near ? near.info : null }),
+    quality: Q,
+    debug: { bloom: (v) => { bloom.enabled = v; }, scene, renderer, camera, composer }
   };
 }
