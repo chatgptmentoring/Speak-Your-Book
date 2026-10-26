@@ -58,7 +58,10 @@ event and discover how to speak their own book (free discovery call).
 
 On phones the fair opens clean: no cards, logo or buttons over the view, just the 3D hall, the
 thumb joystick and the `E` button when something can be opened. Everything else (make your
-book, the live event, the guide, the map, the passport, the discovery call) is in the `⋯` menu.
+book, the live event, between the talks, the guide, the map, the passport, the discovery call) is
+in the `⋯` menu, which also shows who is speaking now or next. A card appears only when the
+visitor asks for one (`E` at the Oracle, the stage or the temple, or the Oracle from the menu),
+with a close button. On the day of the event the live talks open small in the corner.
 
 Browsers without WebGL get a readable, scrolling version of the same content.
 

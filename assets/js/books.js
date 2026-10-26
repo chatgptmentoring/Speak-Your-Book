@@ -650,6 +650,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     interview: 'https://www.lifecoachcode.com/2023/09/06/find-life-coach-rachel-tamilio/'
   },
   'bengu-davchevski': {
+    photo: 'assets/img/authors/bengu-davchevski.webp',
     inbox: 'bengudavchevski@gmail.com',
     linkedin: 'https://www.linkedin.com/in/bengu-davchevski-713039203/',
     bio: 'Writes about rebuilding yourself in difficult times, drawing on famous fables and her own life experience.'

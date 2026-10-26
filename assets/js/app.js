@@ -405,7 +405,8 @@ function toast(html, ms = 3200, action = null) {
   const wrap = $('#toasts');
   const el = document.createElement('div');
   el.className = 'toast';
-  el.innerHTML = html;
+  // the words wrap as one block beside the icon and the button
+  el.innerHTML = html.replace(/^(\s*<i>[^<]*<\/i>)?\s*([\s\S]*)$/, (m, icon, text) => `${icon || ''}<span class="toast__text">${text}</span>`);
   if (action) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -600,8 +601,11 @@ function buildBookChapters() {
   });
 }
 
+// phones explore in a clean view without cards; a card opens only when the visitor asks for it
+const cleanView = window.matchMedia('(pointer: coarse) and (max-width: 760px), (pointer: coarse) and (max-height: 500px)');
 const Context = (() => {
   const tour = $('#tour');
+  const root = document.documentElement;
   let current = null;
   function show(id) {
     if (!id || id === current) return;
@@ -612,9 +616,15 @@ const Context = (() => {
     next.classList.add('is-active');
     const card = $('.card', next);
     if (card) card.scrollTop = 0;
+    if (!root.classList.contains('is-card-open')) tour.classList.remove('is-expanded');
+  }
+  function closeCard() {
+    if (!root.classList.contains('is-card-open')) return;
+    root.classList.remove('is-card-open');
     tour.classList.remove('is-expanded');
   }
   function expand() {
+    if (cleanView.matches && root.classList.contains('is-3d')) root.classList.add('is-card-open');
     tour.classList.add('is-expanded');
     const c = current && document.getElementById(current);
     if (c) { c.classList.remove('is-pulse'); void c.offsetWidth; c.classList.add('is-pulse'); }
@@ -630,8 +640,9 @@ const Context = (() => {
       more.addEventListener('click', () => tour.classList.toggle('is-expanded'));
       card.appendChild(more);
     });
+    $('[data-card-close]', tour).addEventListener('click', closeCard);
   }
-  return { init, show, expand, current: () => current };
+  return { init, show, expand, closeCard, current: () => current };
 })();
 
 /* =========================================================================
@@ -980,6 +991,7 @@ function initJoystick() {
     cy = r.top + r.height / 2;
     pad.setPointerCapture(id);
     pad.classList.add('is-active');
+    Context.closeCard();
     move(e.clientX, e.clientY);
     Hints.moved();
     Tour.userMoved();
@@ -1183,8 +1195,8 @@ const EventUI = (() => {
     $$('[data-zoom]').forEach((z) => { z.hidden = after || !ZOOM; if (ZOOM) z.href = ZOOM; z.classList.toggle('btn--gold', isEventDay()); z.classList.toggle('btn--ghost', !isEventDay()); });
     if (isEventDay()) setText('pill-sub', 'join on Zoom now');
     const n = now();
-    if (n && n.kind === 'talk') { setText('pill', `Now: ${n.a.displayName}`); setText('pill-sub', 'speaking live · join on Zoom'); }
-    if (n && n.kind === 'break') { setText('pill', `Next: ${firstName(n.a)} · ${n.s.time}`); setText('pill-sub', `in ${Program.minsTo(n.s)} min · a break to enjoy the fair`); }
+    if (n && n.kind === 'talk') { setText('pill', `Now: ${n.a.displayName}`); setText('pill-sub', 'speaking live · join on Zoom'); setText('menu', `Now speaking: ${n.a.displayName}`); }
+    if (n && n.kind === 'break') { setText('pill', `Next: ${firstName(n.a)} · ${n.s.time}`); setText('pill-sub', `in ${Program.minsTo(n.s)} min · a break to enjoy the fair`); setText('menu', `Next: ${n.a.displayName} · in ${Program.minsTo(n.s)} min`); }
     Between.check(n);
     $('#event-pill').hidden = after;
     $$('.event-ribbon').forEach((r) => { r.hidden = after; });
@@ -1306,7 +1318,7 @@ const Reminders = (() => {
     save();
     Sound.play('stamp');
     track('reminder_set', { author: s.author });
-    toast(`<i>🔔</i> We’ll remind you 30, 10 and 5 minutes before <b>${esc(nameOf(s))}</b> (${esc(s.time)}) while the fair is open. For a reminder on your phone, add it to your calendar.`, 9000, { label: 'Add to calendar', fn: () => calendar(s) });
+    toast(`<i>🔔</i> Reminder set for <b>${esc(nameOf(s))}</b> at ${esc(s.time)}: 30, 10 and 5 minutes before, while the fair is open. Add it to your calendar to be reminded on your phone too.`, 9000, { label: 'Add to calendar', fn: () => calendar(s) });
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
     check();
   }
@@ -2063,7 +2075,12 @@ function doAction(name) {
     case 'between': Between.open(); break;
     case 'breathe': Breathe.open(); break;
     case 'lantern': Lantern.open(); break;
-    case 'quiz': Oracle.restart(); goPlace('oracle'); Context.expand(); setTimeout(Oracle.focus, 400); break;
+    case 'quiz':
+      Oracle.restart();
+      if (cleanView.matches) Context.show('oracle'); else goPlace('oracle');
+      Context.expand();
+      setTimeout(Oracle.focus, 400);
+      break;
     default:
   }
 }
@@ -2120,7 +2137,7 @@ const LiveStream = (() => {
     // on the day, the talks open by themselves in the corner (once per visit)
     if (phase() === 'live' && !sessionStorage.getItem('lcc-fair-stream')) {
       try { sessionStorage.setItem('lcc-fair-stream', '1'); } catch (e) { /* private mode */ }
-      setTimeout(() => open('dock'), 4000);
+      setTimeout(() => open(cleanView.matches ? 'min' : 'dock'), 4000);
     }
   }
   return { init, open, close, available: () => !!src, isOn: () => !!src && ['live', 'today', 'soon'].includes(phase()) };
@@ -2254,19 +2271,20 @@ const Breathe = (() => {
 const Lantern = (() => {
   const sheet = makeSheet('lantern-panel', { onOpen: () => setTimeout(() => { if (finePointer) $('#lt-text').focus({ preventScroll: true }); }, 80) });
   const IDEAS = ['The courage to begin', 'Healing for my family', 'Gratitude for the people who carried me', 'May my story help someone', 'Peace in my heart'];
-  let lastToast = 0;
+  let lastToast = 0, lastWords = '';
   function card(text) {
     const c = K.makeIntentionCard({ text, name: People.myName(), logo: LOGO, lines: { footer: 'The Virtual Book Fair · Life Coach Code' } });
     Keepsake.show(c, { title: 'Your intention', eyebrow: 'A wishing lantern from the fair', filename: 'my-intention.jpg', text: 'My wishing lantern from the Virtual Book Fair by Life Coach Code.' });
     track('lantern_card');
   }
   function release(text) {
+    if (text) lastWords = text;
     sheet.close();
     track('lantern_release', { shared: People.lantern() });
     if (!world) { if (text) card(text); return; }
     world.releaseLantern({ mine: true });
     Sound.play('win');
-    setTimeout(() => toast('<i>✦</i> Your lantern is rising over the fair. Look up.', 9000, text ? { label: 'Keep my words', fn: () => card(text) } : null), 600);
+    setTimeout(() => toast('<i>✦</i> Your lantern is rising over the fair. Look up.', 14000, text ? { label: 'Keep my words', fn: () => card(text) } : null), 600);
   }
   function fromPeer(peer) {
     if (!world) return;
@@ -2276,13 +2294,15 @@ const Lantern = (() => {
     const who = peer.author ? peer.author.name : peer.name || 'A visitor';
     toast(`<i>✦</i> ${esc(who)} released a wishing lantern`, 5000, { label: 'Release one too', fn: open });
   }
-  function open() { sheet.open(); track('lantern_open'); }
+  // the words of the last lantern can still be kept after the message has gone
+  function open() { $('#lt-keep').hidden = !lastWords; sheet.open(); track('lantern_open'); }
   function init() {
     $('#lt-ideas').innerHTML = IDEAS.map((t) => `<button class="chip" type="button" data-idea>${esc(t)}</button>`).join('');
     sheet.el.addEventListener('click', (e) => {
       const i = e.target.closest('[data-idea]');
       if (i) { $('#lt-text').value = i.textContent; $('#lt-text').focus({ preventScroll: true }); }
     });
+    $('#lt-keep').addEventListener('click', () => { sheet.close(); card(lastWords); });
     $('#lt-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const text = $('#lt-text').value.replace(/\s+/g, ' ').trim().slice(0, 120);
@@ -2297,6 +2317,7 @@ let Guide = null;
 const More = (() => {
   const btn = $('#more-btn'), menu = $('#more');
   function set(open) {
+    if (open) Between.close();
     menu.hidden = !open;
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) setTimeout(() => { const f = $('button, a', menu); if (f) f.focus({ preventScroll: true }); }, 20);
