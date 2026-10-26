@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>The Virtual Book Fair · Speak Your Book by Life Coach Code</title>
+  <meta name="description" content="Walk through the Life Coach Code Virtual Book Fair: a candlelit 3D hall of books written by coaches, therapists and leaders. Visit every booth, open the books, take one home on Amazon, and discover how to speak your own book.">
+  <meta name="theme-color" content="#0a0611">
+  <link rel="canonical" href="https://chatgptmentoring.github.io/Speak-Your-Book/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Life Coach Code">
+  <meta property="og:title" content="The Virtual Book Fair · Speak Your Book">
+  <meta property="og:description" content="Walk a candlelit 3D hall of books written by coaches, healers and leaders, brought to life with Life Coach Code. Your book could be next.">
+  <meta property="og:url" content="https://chatgptmentoring.github.io/Speak-Your-Book/">
+  <meta property="og:image" content="https://chatgptmentoring.github.io/Speak-Your-Book/assets/img/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="The Virtual Book Fair · Speak Your Book">
+  <meta name="twitter:description" content="Walk a candlelit 3D hall of books written by coaches, healers and leaders. Your book could be next.">
+  <meta name="twitter:image" content="https://chatgptmentoring.github.io/Speak-Your-Book/assets/img/og.jpg">
+
+  <link rel="icon" href="assets/img/brand/logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/img/brand/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script>document.documentElement.classList.add('js');</script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./assets/vendor/three/three.module.min.js",
+      "three/addons/": "./assets/vendor/three/addons/"
+    }
+  }
+  </script>
+  <link rel="modulepreload" href="assets/vendor/three/three.module.min.js">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "ItemList", "name": "The Virtual Book Fair by Life Coach Code", "itemListElement": [{"@type": "ListItem", "position": 1, "item": {"@type": "Book", "name": "Finding Love in the Mirror", "author": {"@type": "Person", "name": "Soonjin Cho"}, "url": "https://www.amazon.com/dp/B0HL4YQQ15"}}, {"@type": "ListItem", "position": 2, "item": {"@type": "Book", "name": "Clarity Before Momentum", "author": {"@type": "Person", "name": "Edith Moricz"}, "url": "https://www.amazon.com.au/Clarity-Before-Momentum-Executive-Realigning-ebook/dp/B0GHMGSPQG"}}, {"@type": "ListItem", "position": 3, "item": {"@type": "Book", "name": "Teen Mental Health", "author": {"@type": "Person", "name": "Chuck Barnard"}, "url": "https://www.amazon.com/Teen-Mental-Health-Parent-Resilient-ebook/dp/B0GN5BHBNS/"}}, {"@type": "ListItem", "position": 4, "item": {"@type": "Book", "name": "The Invisible Midlife Woman", "author": {"@type": "Person", "name": "Sonia Jenkins"}, "url": "https://www.amazon.co.uk/Invisible-Midlife-Woman-high-performing-disappear-ebook/dp/B0H6PS1LPN"}}, {"@type": "ListItem", "position": 5, "item": {"@type": "Book", "name": "Conscious Integrative Therapy", "author": {"@type": "Person", "name": "Susan J. Razavi"}, "url": "https://www.amazon.in/Conscious-Integrative-Therapy-TrancePlan-Hypnotherapy-ebook/dp/B0FQTW3HP9"}}, {"@type": "ListItem", "position": 6, "item": {"@type": "Book", "name": "More Than a Game", "author": {"@type": "Person", "name": "Chuck Barnard"}, "url": "https://www.amazon.com/More-Than-Game-Resilient-Sacrificing-ebook/dp/B0FQKNVD3L"}}, {"@type": "ListItem", "position": 7, "item": {"@type": "Book", "name": "Food Isn't the Problem", "author": {"@type": "Person", "name": "Tanya Fasnacht Jolliffe"}, "url": "https://www.amazon.com/Food-Isnt-Problem-Understanding-Emotional/dp/B0HHCBCQGB/"}}, {"@type": "ListItem", "position": 8, "item": {"@type": "Book", "name": "Prince and the Prodigal", "author": {"@type": "Person", "name": "Chuck Barnard"}, "url": "https://www.amazon.com/Honoring-Horatio-Simon-Potter-ebook/dp/B00G13B57W/"}}, {"@type": "ListItem", "position": 9, "item": {"@type": "Book", "name": "The Journey to Empowerment Through Self-Love", "author": {"@type": "Person", "name": "Jessica V. Fuentes"}, "url": "https://www.amazon.in/Journey-Empowerment-Through-Self-Love-Rediscovery-ebook/dp/B0HH173RK1"}}, {"@type": "ListItem", "position": 10, "item": {"@type": "Book", "name": "When the Blueprint Burned", "author": {"@type": "Person", "name": "Jennifer A. Schmeisser"}}}, {"@type": "ListItem", "position": 11, "item": {"@type": "Book", "name": "Everything Happens For You", "author": {"@type": "Person", "name": "Monika Puiu"}}}, {"@type": "ListItem", "position": 12, "item": {"@type": "Book", "name": "Healing Unraveled", "author": {"@type": "Person", "name": "Dolores Fazzino"}}}]}</script>
+</head>
+<body>
+  <a class="skip-link" href="#hall">Skip to the books</a>
+
+  <!-- The 3D fair -->
+  <canvas id="world" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <!-- Loader: fades out on its own, no click needed -->
+  <div class="loader" id="loader" aria-hidden="true">
+    <div class="loader__mark"><img src="assets/img/brand/logo.svg" alt="" width="96" height="96"></div>
+    <p class="loader__eyebrow">Life Coach Code presents</p>
+    <p class="loader__title">The Virtual <em>Book Fair</em></p>
+    <div class="loader__bar"><span id="loader-bar"></span></div>
+    <p class="loader__msg" id="loader-msg">Lighting the lanterns&hellip;</p>
+  </div>
+
+  <!-- HUD -->
+  <header class="hud" id="hud">
+    <a class="brand" href="#welcome" aria-label="Life Coach Code: back to the entrance">
+      <span class="brand__mark" aria-hidden="true"><img src="assets/img/brand/logo.svg" alt="" width="40" height="40"></span>
+      <span class="brand__text"><b>Life Coach Code</b><small>Virtual Book Fair</small></span>
+    </a>
+    <div class="hud__tools">
+      <button class="icon-btn map-btn" id="map-btn" type="button" aria-label="Open the map of the fair (M)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4L3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 4v13M15 6.5v13" stroke="currentColor" stroke-width="1.5"/></svg>
+        <span class="map-btn__text">Map</span>
+      </button>
+      <button class="icon-btn passport-btn" id="passport-btn" type="button" aria-label="Open your Fair Passport">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="10.5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 17h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span class="passport-btn__count" id="passport-count">0/12</span>
+      </button>
+      <button class="icon-btn sound-btn" id="sound-btn" type="button" aria-pressed="false" aria-label="Turn music on">
+        <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 9.5l5 5m0-5l-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="sound-bars sound-on" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      </button>
+      <a class="btn btn--gold btn--sm hud__cta" href="https://forms.gle/d2YU7q9SEHPW9bZP8" target="_blank" rel="noopener">Free discovery call</a>
+    </div>
+  </header>
+
+  <!-- Controls -->
+  <div class="hint" id="hint" aria-hidden="true">
+    <span class="hint__keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</span>
+    <span><kbd>Shift</kbd> run</span>
+    <span><kbd class="kbd--wide">drag</kbd> look</span>
+    <span><kbd>E</kbd> interact</span>
+    <span><kbd>M</kbd> map</span>
+  </div>
+  <div class="hint hint--touch" aria-hidden="true">
+    <span>Left thumb to walk &middot; drag to look &middot; tap a book to open it</span>
+  </div>
+  <div class="joystick" id="joystick" aria-hidden="true"><span class="joystick__knob" id="joystick-knob"></span></div>
+  <button class="act" id="act" type="button">
+    <kbd class="act__key">E</kbd>
+    <span class="act__text"><b id="act-verb">Open the book</b><small id="act-what"></small></span>
+  </button>
+  <div class="tooltip" id="tooltip" aria-hidden="true"></div>
+
+  <!-- The tour: each chapter is a stop in the 3D hall -->
+  <main class="tour" id="tour">
+    <section class="chapter chapter--welcome" id="welcome" data-side="left" aria-labelledby="welcome-title">
+      <div class="card card--plain card--welcome">
+        <p class="eyebrow">Life Coach Code presents</p>
+        <h1 class="welcome__title" id="welcome-title">The Virtual <em>Book Fair</em></h1>
+        <p class="welcome__lead">Step through the arch into a candlelit hall of books written by coaches, therapists and leaders. Walk from booth to booth, open the books, and take one home. Every story here began with a voice.</p>
+        <p class="welcome__controls welcome__controls--keys">Walk with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>, drag to look around, and press <kbd>E</kbd> when something glows.</p>
+        <p class="welcome__controls welcome__controls--touch">Use the joystick to walk, drag to look around, and tap any book to open it.</p>
+        <div class="card__actions">
+          <a class="btn btn--gold" href="#hall">Take me inside
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a class="btn btn--ghost" href="#speak">Speak your own book</a>
+        </div>
+        <button class="music-pill" id="music-pill" type="button" aria-pressed="false">
+          <span class="music-pill__icon" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="music-pill__text">Play the fair&rsquo;s music</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="chapter" id="hall" data-side="left" aria-labelledby="hall-title">
+      <article class="card">
+        <p class="eyebrow">The Grand Hall</p>
+        <h2 class="card__h" id="hall-title">Every coach carries a book. <em>Here are <span data-stat="books-word">twelve</span> that found their voice.</em></h2>
+        <ul class="stats">
+          <li><b data-stat="books">12</b><span>books</span></li>
+          <li><b data-stat="authors">10</b><span>authors</span></li>
+          <li><b data-stat="soon">3</b><span>launching soon</span></li>
+        </ul>
+        <p class="card__p">Each one was brought to life with Life Coach Code. Walk down the aisle and visit every booth: step close and press <kbd>E</kbd>, or click any book to open it and take it home.</p>
+        <p class="card__tip"><span aria-hidden="true">&#10022;</span> Collect a passport stamp at every booth you open.</p>
+      </article>
+    </section>
+
+    <section class="chapter" id="oracle" data-side="left" aria-labelledby="oracle-title">
+      <article class="card card--oracle">
+        <p class="eyebrow">The Book Oracle</p>
+        <h2 class="card__h" id="oracle-title">What is your heart <em>asking for</em> right now?</h2>
+        <p class="card__p">Choose an intention and the Oracle will turn over the book that is waiting for you.</p>
+        <div class="oracle__chips" id="oracle-chips" role="group" aria-label="Choose an intention"></div>
+        <div class="oracle__card" id="oracle-card" aria-live="polite">
+          <div class="oracle__inner">
+            <div class="oracle__back" aria-hidden="true">
+              <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="86" fill="none" stroke="currentColor" stroke-width=".8"/><circle cx="100" cy="100" r="70" fill="none" stroke="currentColor" stroke-width=".6" stroke-dasharray="2 5"/><path d="M100 22l18 60 60 18-60 18-18 60-18-60-60-18 60-18z" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="100" cy="100" r="9" fill="currentColor"/></svg>
+            </div>
+            <div class="oracle__front" id="oracle-front"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- one chapter per booth is added here from assets/js/books.js -->
+
+    <section class="chapter" id="speak" data-side="left" aria-labelledby="speak-title">
+      <article class="card card--wide card--speak">
+        <p class="eyebrow">The opportunity for coaches</p>
+        <h2 class="card__h" id="speak-title">Your book is already inside you. <em>Speak it.</em></h2>
+        <p class="card__p"><strong>Speak Your Book</strong> is Life Coach Code&rsquo;s path for coaches who want to become published authors without wrestling a blank page. You share your story, your method and your wisdom out loud, in your own voice. We help turn those spoken words into a finished book, just like the ones in this hall.</p>
+        <ol class="steps">
+          <li><span>I</span><div><b>Book a free discovery call</b><p>Tell us about your story and the book you&rsquo;ve been carrying.</p></div></li>
+          <li><span>II</span><div><b>Speak your story</b><p>Talk it through in your own voice. No blank page, no writer&rsquo;s block.</p></div></li>
+          <li><span>III</span><div><b>Watch it become a book</b><p>Your spoken words are shaped into chapters, ready for readers.</p></div></li>
+          <li><span>IV</span><div><b>Take your place at the fair</b><p>Share your book with the world and invite new clients into your work.</p></div></li>
+        </ol>
+        <div class="card__actions">
+          <a class="btn btn--gold" href="https://forms.gle/d2YU7q9SEHPW9bZP8" target="_blank" rel="noopener">Schedule a free discovery call</a>
+          <a class="text-link" href="https://www.lifecoachcode.com/speak-your-book" target="_blank" rel="noopener">Learn more &rarr;</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="chapter" id="about" data-side="right" aria-labelledby="about-title">
+      <article class="card card--wide">
+        <p class="eyebrow">Sponsored &amp; created by</p>
+        <h2 class="card__h" id="about-title">Life Coach Code. <em>Reprogram to superhuman.</em></h2>
+        <p class="card__p">A home for coaches and seekers, built on four pillars. We help coaches get seen, get heard and get published, so the people who need their work can find it.</p>
+        <ul class="pillars">
+          <li><img src="assets/img/brand/pillar-spirit.svg" alt="" width="56" height="56"><span>Spirit</span></li>
+          <li><img src="assets/img/brand/pillar-mind.svg" alt="" width="56" height="56"><span>Mind</span></li>
+          <li><img src="assets/img/brand/pillar-body.svg" alt="" width="56" height="56"><span>Body</span></li>
+          <li><img src="assets/img/brand/pillar-heart.svg" alt="" width="56" height="56"><span>Heart</span></li>
+        </ul>
+        <ul class="solutions">
+          <li><b>Publishing</b><span>Speak Your Book: become an author by speaking, not typing.</span></li>
+          <li><b>Visibility</b><span>Features and media that put your expertise in front of seekers.</span></li>
+          <li><b>Recognition</b><span>Awards and honours for coaches who are changing lives.</span></li>
+          <li><b>Stages</b><span>Summits and events built for transformational voices.</span></li>
+        </ul>
+        <div class="card__actions">
+          <a class="btn btn--ghost" href="https://www.lifecoachcode.com/solutions" target="_blank" rel="noopener">See every solution for coaches</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="chapter chapter--finale" id="finale" data-side="left" aria-labelledby="finale-title">
+      <article class="card card--finale">
+        <p class="eyebrow">An open invitation</p>
+        <h2 class="card__h card__h--xl" id="finale-title">This pedestal is waiting <em>for your book.</em></h2>
+        <p class="card__p">Book a free discovery call and tell us about the book you&rsquo;ve been carrying. It&rsquo;s a friendly conversation about your story, with no cost and no obligation.</p>
+        <div class="card__actions">
+          <a class="btn btn--gold btn--lg" href="https://forms.gle/d2YU7q9SEHPW9bZP8" target="_blank" rel="noopener">
+            Schedule my free discovery call
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+        <footer class="footer">
+          <nav class="footer__links" aria-label="Footer">
+            <a href="https://www.lifecoachcode.com/solutions" target="_blank" rel="noopener">Solutions for coaches</a>
+            <a href="https://www.lifecoachcode.com/speak-your-book" target="_blank" rel="noopener">Speak Your Book</a>
+            <a href="https://www.lifecoachcode.com" target="_blank" rel="noopener">lifecoachcode.com</a>
+            <a href="#welcome">Back to the entrance &uarr;</a>
+          </nav>
+          <p class="footer__fine">Book titles, covers and content &copy; their respective authors. Purchases are completed on Amazon. &copy; <span id="year">2026</span> Life Coach Code.</p>
+        </footer>
+      </article>
+    </section>
+  </main>
+
+  <!-- Booth detail: the 3D book opens behind this panel -->
+  <div class="detail" id="detail" role="dialog" aria-modal="true" aria-labelledby="detail-title" hidden>
+    <div class="detail__panel" id="detail-panel">
+      <div class="detail__bar">
+        <button class="icon-btn" type="button" id="detail-prev" aria-label="Previous booth">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="detail__count" id="detail-count"></span>
+        <button class="icon-btn" type="button" id="detail-next" aria-label="Next booth">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="icon-btn detail__close" type="button" data-close aria-label="Leave the booth">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="detail__body" id="detail-body"></div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="map" id="map" role="dialog" aria-modal="true" aria-labelledby="map-title" hidden>
+    <div class="map__backdrop" data-close></div>
+    <div class="map__panel">
+      <button class="map__close icon-btn" type="button" data-close aria-label="Close the map">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <p class="eyebrow">Map of the fair</p>
+      <h2 class="map__title" id="map-title">Where would you like to go?</h2>
+      <div class="map__list" id="map-list"></div>
+    </div>
+  </div>
+
+  <!-- Passport -->
+  <div class="passport" id="passport" role="dialog" aria-modal="true" aria-labelledby="passport-title" hidden>
+    <div class="passport__backdrop" data-close></div>
+    <div class="passport__book">
+      <button class="passport__close icon-btn" type="button" data-close aria-label="Close passport">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <p class="eyebrow eyebrow--ink">Your Fair Passport</p>
+      <h2 class="passport__title" id="passport-title">Collect a stamp at every booth</h2>
+      <p class="passport__status" id="passport-status"></p>
+      <ul class="passport__stamps" id="passport-stamps"></ul>
+      <div class="passport__reward" id="passport-reward" hidden>
+        <p><b>You toured the whole fair.</b> Every booth, every journey. The next book on these pedestals could be yours.</p>
+        <a class="btn btn--ink" href="https://forms.gle/d2YU7q9SEHPW9bZP8" target="_blank" rel="noopener">Talk to us about your book</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <canvas class="petals" id="petals" aria-hidden="true"></canvas>
+
+  <noscript>
+    <style>.loader{display:none}</style>
+    <div class="noscript-list">
+      <h2>The books at the fair</h2>
+      <ul>
+        <li><a href="https://www.amazon.com/dp/B0HL4YQQ15">Finding Love in the Mirror, by Soonjin Cho</a></li>
+        <li><a href="https://www.amazon.com.au/Clarity-Before-Momentum-Executive-Realigning-ebook/dp/B0GHMGSPQG">Clarity Before Momentum, by Edith Moricz</a></li>
+        <li><a href="https://www.amazon.com/Teen-Mental-Health-Parent-Resilient-ebook/dp/B0GN5BHBNS/">Teen Mental Health, by Chuck Barnard</a></li>
+        <li><a href="https://www.amazon.co.uk/Invisible-Midlife-Woman-high-performing-disappear-ebook/dp/B0H6PS1LPN">The Invisible Midlife Woman, by Sonia Jenkins</a></li>
+        <li><a href="https://www.amazon.in/Conscious-Integrative-Therapy-TrancePlan-Hypnotherapy-ebook/dp/B0FQTW3HP9">Conscious Integrative Therapy, by Susan J. Razavi</a></li>
+        <li><a href="https://www.amazon.com/More-Than-Game-Resilient-Sacrificing-ebook/dp/B0FQKNVD3L">More Than a Game, by Chuck Barnard</a></li>
+        <li><a href="https://www.amazon.com/Food-Isnt-Problem-Understanding-Emotional/dp/B0HHCBCQGB/">Food Isn't the Problem, by Tanya Fasnacht Jolliffe</a></li>
+        <li><a href="https://www.amazon.com/Honoring-Horatio-Simon-Potter-ebook/dp/B00G13B57W/">Prince and the Prodigal, by Chuck Barnard</a></li>
+        <li><a href="https://www.amazon.in/Journey-Empowerment-Through-Self-Love-Rediscovery-ebook/dp/B0HH173RK1">The Journey to Empowerment Through Self-Love, by Jessica V. Fuentes</a></li>
+        <li>When the Blueprint Burned, by Jennifer A. Schmeisser (coming soon)</li>
+        <li>Everything Happens For You, by Monika Puiu (coming soon)</li>
+        <li>Healing Unraveled, by Dolores Fazzino (coming soon)</li>
+      </ul>
+    </div>
+  </noscript>
+
+  <script src="assets/js/books.js"></script>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
