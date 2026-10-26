@@ -29,7 +29,8 @@ const mod = (a, m) => ((a % m) + m) % m;
 const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
 const isSoon = (b) => b.status === 'coming-soon';
 const authorName = (b) => b.displayAuthor || b.author;
-const coverSrc = (b, size) => `assets/img/covers/${b.slug}-${size}.webp`;
+const asset = window.FAIR_ASSET || ((p) => p);
+const coverSrc = (b, size) => asset(`assets/img/covers/${b.slug}-${size}.webp`);
 const pad2 = (n) => String(n).padStart(2, '0');
 const initials = (name) => { const w = name.split(/\s+/).filter((x) => /^\p{Lu}/u.test(x)); return w.length ? w[0][0] + (w.length > 1 ? w[w.length - 1][0] : '') : ''; };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -47,7 +48,7 @@ const BASE_TITLE = document.title;
 
 let world = null;
 const LOGO = new Image();
-LOGO.src = 'assets/img/brand/logo-512.png';
+LOGO.src = asset('assets/img/brand/logo-512.png');
 const loadImg = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
 
 /* Analytics: a no-op unless FAIR_ANALYTICS.enabled (see README). Every action is also
@@ -1219,7 +1220,7 @@ const AuthorPanel = (() => {
       <input class="au__hp" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
       <div class="card__actions"><button class="btn btn--gold" type="submit">Send message</button><button class="text-link" type="button" data-msg-cancel>Cancel</button></div>
       <p class="au__msg-status" role="status" aria-live="polite"></p>
-      <p class="sheet__fine">Your name, email and message are emailed ${own ? `to ${esc(a.displayName)}` : `to Life Coach Code, who will pass them to ${esc(a.displayName)}`}, so they can reply to you directly. Sent securely with FormSubmit.</p>
+      <p class="sheet__fine">Your name, email and message are emailed ${own ? `to ${esc(a.displayName)}` : `to Life Coach Code, who will pass them to ${esc(a.displayName)}`}, so they can reply to you directly. Sent securely ${CONTACT.via === 'site' ? 'by Life Coach Code' : 'with FormSubmit'}.</p>
     </form>`;
   }
   async function send(form) {
@@ -1239,7 +1240,12 @@ const AuthorPanel = (() => {
     status.className = 'au__msg-status';
     try {
       const inbox = inboxOf(a).replace(/[^\w@.+-]/g, '');
-      const res = await fetch((CONTACT.endpoint || 'https://formsubmit.co/ajax/') + inbox, {
+      // on the WordPress site the message goes through the site itself, which keeps the authors' addresses private
+      const res = CONTACT.via === 'site' ? await fetch(CONTACT.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ ...data, author: a.id })
+      }) : await fetch((CONTACT.endpoint || 'https://formsubmit.co/ajax/') + inbox, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
@@ -1307,10 +1313,12 @@ const People = (() => {
 
   function readAuthorLink() {
     const q = new URLSearchParams(location.search);
-    const id = q.get('author');
+    // fair-author: WordPress keeps ?author= for its own author pages; ?author= still works on GitHub Pages
+    const id = q.get('fair-author') || q.get('author');
     const m = location.hash.match(/^#key=([A-Za-z0-9_-]{20,})$/);
     if (id && m && authorById[id]) {
       store.set(AKEY, { id, d: m[1] });
+      q.delete('fair-author');
       q.delete('author');
       history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
     }

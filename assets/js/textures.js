@@ -290,7 +290,7 @@ function paper(ctx, W, H, side) {
 export function bookPageSpecs(book) {
   const p = [{ kind: 'title' }, { kind: 'quote' }, { kind: 'contents' }];
   if (book.steps) p.push({ kind: 'steps' });
-  (book.samplePages || []).forEach((src) => p.push({ kind: 'image', src }));
+  (book.samplePages || []).forEach((src) => p.push({ kind: 'image', src: (window.FAIR_ASSET || ((s) => s))(src) }));
   book.description.forEach((text, i) => p.push({ kind: 'text', text, heading: i === 0 ? 'About this book' : '' }));
   p.push({ kind: 'for' });
   p.push({ kind: 'end' });

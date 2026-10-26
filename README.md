@@ -2,6 +2,7 @@
 
 A walkable 3D book fair floating in space, hosted by **Life Coach Code**, and the home of the
 **Speak Your Book** live event (Sunday 1 November, free, live on Zoom).
+It runs as a page on lifecoachcode.com through a WordPress plugin, or on its own on GitHub Pages.
 Visitors land straight inside the fair. They can walk from booth to booth, open each book in 3D,
 meet the authors, and see the other people walking the fair. They can register for the live
 event and discover how to speak their own book (free discovery call).
@@ -48,6 +49,39 @@ book, the live event, the guide, the map, the passport, the discovery call) is i
 
 Browsers without WebGL get a readable, scrolling version of the same content.
 
+## Put the fair on Life Coach Code (WordPress)
+
+The plugin `dist/lcc-virtual-book-fair.zip` puts the whole fair on a page of lifecoachcode.com,
+with its AI guide and the messages to authors running on the site's own server.
+
+1. **Plugins → Add New → Upload Plugin**, choose `lcc-virtual-book-fair.zip`, **Install Now**,
+   then **Activate**. (The zip is about 7 MB; if the upload is refused, ask the host to raise the
+   upload limit or upload the unzipped folder to `wp-content/plugins` by SFTP.)
+2. **Settings → Virtual Book Fair → Create the fair's page.** It is created as a draft at
+   `/virtual-book-fair/`. Preview it, then publish it. Any other page can show the fair too:
+   choose the template **Virtual Book Fair (full screen)** in the page's settings.
+3. On the same settings screen, whenever they are confirmed:
+   - **The live event:** start date and time, registration and Zoom links, the YouTube live
+     stream, and who speaks when (`5:00 pm GMT | Chuck Barnard | Raising resilient teens`).
+   - **The AI guide:** the OpenAI API key (it stays on the server), the model and the limits.
+   - **Messages to authors:** each author's email address. Click **Send me a test email** to
+     check that the site can send email.
+   - **Visitors:** live presence on or off, and an optional Google Analytics ID (the fair page
+     doesn't use the theme, so the site's usual tracking doesn't run there).
+4. Saving clears the fair page from the site's page cache. If visitors still see the old
+   version, purge the cache (BigScoots or the cache plugin).
+
+The fair fills the whole page, without the theme's header and footer. Its files are served from
+the plugin's folder, and each build gives them a new version so visitors get updates at once.
+If a security plugin blocks the WordPress REST API for visitors, allow `/wp-json/lcc-fair/v1/`.
+
+**After changing the fair** (books, copy, images, code): run `node tools/build-wp-plugin.mjs`,
+then upload the new `dist/lcc-virtual-book-fair.zip` the same way and choose **Replace current
+with uploaded**. The settings are kept. The build takes the authors' email addresses out of the
+public `books.js` and keeps them on the server, where visitors can't see them.
+
+The plugin's source is in `wordpress/lcc-virtual-book-fair`.
+
 ## Publish on GitHub Pages
 
 1. Push this repository to GitHub.
@@ -71,8 +105,9 @@ python3 -m http.server 8000
 
 ## The live event
 
-Everything about the event lives in `FAIR_EVENT` in `assets/js/books.js`: the date, the
-registration form, the Zoom wording and the short description. The countdown, the top-bar pill,
+On WordPress, set the start time, links, stream and schedule in **Settings → Virtual Book Fair**;
+they take precedence over `books.js`. Everything else about the event lives in `FAIR_EVENT` in
+`assets/js/books.js`: the date, the registration form, the Zoom wording and the short description. The countdown, the top-bar pill,
 the posters, the stage screens, the calendar file and the event panel all read from it.
 
 - **Start time**: when it is confirmed, set `start` with its UTC offset, for example
@@ -95,11 +130,15 @@ The links contain a private key. The fair stores only the matching public keys
 (`FAIR_LIVE.authorKeys` in `books.js`), so nobody can pretend to be an author.
 
 ```sh
-node tools/author-links.mjs                 # new links for every author
-node tools/author-links.mjs chuck-barnard   # a new link for one author (the old one stops working)
+BASE=https://www.lifecoachcode.com/virtual-book-fair/ node tools/author-links.mjs   # new links for every author
+BASE=https://www.lifecoachcode.com/virtual-book-fair/ node tools/author-links.mjs chuck-barnard   # one author (their old link stops working)
 ```
 
-Paste the printed `authorKeys` into `books.js`, publish, and send each author their own link.
+Paste the printed `authorKeys` into `books.js`, publish (on WordPress: build and upload the
+plugin again), and send each author their own link. Links look like
+`…/virtual-book-fair/?fair-author=chuck-barnard#key=…`. Links made earlier for GitHub Pages
+keep their key: to use one on lifecoachcode.com, keep everything from `#key=` and put
+`https://www.lifecoachcode.com/virtual-book-fair/?fair-author=<author id>` in front of it.
 **Never commit the links.** An author can stop appearing as the author from the *Who's here*
 panel.
 
@@ -114,19 +153,19 @@ switch tips off (bell), have answers read aloud (speaker), or put the guide away
 comes back from the `⋯` menu.
 
 The guide works straight away on its own, answering from `books.js`. To let it hold free-form
-conversations through OpenAI (for example gpt-4o-mini), connect it through the WordPress plugin
-in `tools/lcc-fair-guide`, which keeps the API key private:
+conversations through OpenAI (for example gpt-4o-mini), paste the OpenAI API key in
+**Settings → Virtual Book Fair** on lifecoachcode.com; the fair page on the site then uses it at
+once. In your OpenAI account, set a monthly budget limit for the key's project. (The earlier
+*Fair Guide* plugin is no longer needed; its key carries over.)
 
-1. On lifecoachcode.com: **Plugins → Add New → Upload Plugin**, choose
-   `tools/lcc-fair-guide.zip`, then **Activate**.
-2. **Settings → Fair Guide**: paste the OpenAI API key and save. The page shows the guide's
-   address (`…/wp-json/lcc-fair/v1/guide`).
-3. Put that address in `FAIR_GUIDE.endpoint` in `assets/js/books.js` and publish.
-4. In your OpenAI account, set a monthly budget limit for the key's project.
+The GitHub Pages copy can use the same guide: put the address shown in the settings
+(`https://www.lifecoachcode.com/wp-json/lcc-fair/v1/guide`) in `FAIR_GUIDE.endpoint` in
+`assets/js/books.js`.
 
 **Never put an API key in this repository or in the site's code**: everything here is public.
-The plugin only answers requests from the fair's own address, limits questions per visitor per
-hour and per day, and the guide falls back to its own answers if the plugin is unavailable.
+The plugin only answers requests from the fair's own address (and the other addresses listed in
+the settings), limits questions per visitor per hour and per day, and the guide falls back to
+its own answers if the plugin is unavailable.
 
 The guide only speaks from the fair's facts. To let it say who speaks when, fill in
 `FAIR_EVENT.schedule` in `books.js`. Author bios, websites, LinkedIn and Life Coach Code
@@ -148,8 +187,16 @@ Vimeo links work too.
 ## Messages to authors
 
 Each author's panel can show a **Send a message** button. Visitors write their name, email and
-message, and it arrives in the author's inbox as an email they can simply reply to. The site
-has no server, so messages are delivered by FormSubmit (https://formsubmit.co, free).
+message, and it arrives in the author's inbox as an email they can simply reply to.
+
+**On lifecoachcode.com** the site sends the email itself, to the addresses in
+**Settings → Virtual Book Fair** (filled in from `books.js` at first). The addresses never appear
+in the page. Each visitor can send a few messages per hour, and a hidden field stops bots. Use
+**Send me a test email** to check that the site's email works; if it doesn't arrive, set up an
+SMTP plugin or ask the host.
+
+**On GitHub Pages** there is no server, so messages are delivered by FormSubmit
+(https://formsubmit.co, free):
 
 1. Each author's `inbox` in `FAIR_AUTHOR_EXTRAS` (`assets/js/books.js`) holds their email
    address. Authors with an empty `inbox` show no button.
@@ -230,5 +277,7 @@ assets/img/originals/    the covers as supplied
 tools/make_covers.py     prepares covers for a new book
 tools/make_author_photo.py  prepares an author's photo
 tools/author-links.mjs   makes private author links
-tools/lcc-fair-guide/    the WordPress plugin that connects the guide to OpenAI (+ .zip)
+tools/build-wp-plugin.mjs   builds the WordPress plugin zip
+wordpress/lcc-virtual-book-fair/   the WordPress plugin: page template, settings, guide, messages
+dist/lcc-virtual-book-fair.zip     the built plugin, ready to upload
 ```

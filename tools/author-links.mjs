@@ -8,7 +8,7 @@
  *
  *   node tools/author-links.mjs                      new keys for every author
  *   node tools/author-links.mjs chuck-barnard        new key for one author (others unchanged)
- *   BASE=https://example.com/fair/ node tools/author-links.mjs
+ *   BASE=https://www.lifecoachcode.com/virtual-book-fair/ node tools/author-links.mjs
  *
  * Paste the printed authorKeys into FAIR_LIVE in assets/js/books.js and send each author
  * their own link. Do not commit the links: anyone with a link can appear as that author.
@@ -32,7 +32,7 @@ for (const a of authors) {
   const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
   keys[a.id] = b64u(await crypto.subtle.exportKey('raw', pair.publicKey));
   const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
-  links.push(`${a.displayName}: ${BASE}?author=${a.id}#key=${jwk.d}`);
+  links.push(`${a.displayName}: ${BASE}?fair-author=${a.id}#key=${jwk.d}`);
 }
 console.log('// paste into FAIR_LIVE in assets/js/books.js');
 console.log('authorKeys: ' + JSON.stringify(keys, null, 2).replace(/"([a-z0-9-]+)":/g, "'$1':").replace(/: "/g, ": '").replace(/",?$/gm, (m) => m.replace('"', "'")));

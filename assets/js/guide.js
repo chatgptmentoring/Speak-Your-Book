@@ -1,7 +1,7 @@
 /*
  * The fair guide: a companion visitors can ask anything at any time. It answers on its own
  * from the fair's content, and once FAIR_GUIDE.endpoint is set it talks through OpenAI via the
- * Life Coach Code WordPress plugin (tools/lcc-fair-guide), which keeps the API key private.
+ * Life Coach Code WordPress plugin (wordpress/lcc-virtual-book-fair), which keeps the API key private.
  * It can walk visitors to booths, open books and author panels, and point to the right links.
  */
 const STOP = new Set(['the', 'a', 'an', 'to', 'of', 'in', 'for', 'and', 'through', 'than', 'with', 'your', 'you', 'is', 'it', 'on', 'at', 'me', 'my', 'about', 'what', 'who', 'how', 'can', 'i', 'book', 'books', 'tell', 'more', 'this', 'that', 'be', 'are', 'do', 'does', 'please', 'show', 'take', 'go', 'there']);

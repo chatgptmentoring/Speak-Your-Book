@@ -10,6 +10,12 @@
  *   samplePages: ['assets/img/inside/<slug>-1.webp', ...]   real pages to leaf through in 3D
  *   testimonials: [{ quote: '...', name: '...' }]            reader quotes in the booth panel
  */
+
+/* Where the fair's files are served from. Empty when the fair is the site itself (GitHub Pages);
+   the WordPress plugin sets it to the plugin's folder before this file loads. */
+window.FAIR_BASE = window.FAIR_BASE || '';
+window.FAIR_ASSET = (path) => (path && !/^([a-z][a-z0-9+.-]*:|\/)/i.test(path) ? window.FAIR_BASE + path : path);
+
 window.FAIR_BOOKS = [
   {
     slug: 'finding-love-in-the-mirror',
@@ -616,9 +622,10 @@ window.FAIR_STANDS = {
 /* =========================================================================
    The AI guide
    The guide always works on its own, answering from this file. Connect it to OpenAI for
-   free-form conversation by installing the Fair Guide plugin on lifecoachcode.com
-   (tools/lcc-fair-guide) and pasting its address below. The OpenAI key lives only in the
-   plugin's settings on your WordPress site, never in this public code.
+   free-form conversation with the Virtual Book Fair plugin on lifecoachcode.com
+   (wordpress/lcc-virtual-book-fair): on the site it connects by itself; for the GitHub Pages
+   copy, paste its address below. The OpenAI key lives only in the plugin's settings on your
+   WordPress site, never in this public code.
    ========================================================================= */
 window.FAIR_GUIDE = {
   enabled: true,
@@ -629,8 +636,9 @@ window.FAIR_GUIDE = {
 
 /* =========================================================================
    Messages to authors
-   Visitors can write to an author from the author's panel. The message is emailed through
-   FormSubmit (https://formsubmit.co), so no server is needed, and the author can simply reply.
+   Visitors can write to an author from the author's panel. On lifecoachcode.com the WordPress
+   plugin emails it from the site itself. On GitHub Pages it is emailed through FormSubmit
+   (https://formsubmit.co), so no server is needed. Either way the author can simply reply.
    - inbox (per author, above): the author's email address, or better, the random alias that
      FormSubmit sends after the first message is confirmed. The alias keeps the address out of
      the public code.
@@ -656,5 +664,10 @@ window.FAIR_AUTHORS = (() => {
     if (b.credentials && !a.credentials) a.credentials = b.credentials;
     if (b.displayAuthor && /^(Dr\.|Prof\.)/.test(b.displayAuthor)) a.displayName = b.displayAuthor;
   });
-  return [...map.values()].map((a) => ({ ...a, ...(window.FAIR_AUTHOR_EXTRAS[a.id] || {}) }));
+  return [...map.values()].map((a) => {
+    const out = { ...a, ...(window.FAIR_AUTHOR_EXTRAS[a.id] || {}) };
+    if (out.photo) out.photo = window.FAIR_ASSET(out.photo);
+    if (out.voice) out.voice = window.FAIR_ASSET(out.voice);
+    return out;
+  });
 })();

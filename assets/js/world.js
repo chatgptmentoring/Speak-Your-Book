@@ -27,12 +27,13 @@ const ORACLE_POS = new V3(4.5, 0, -3.2);
 const damp = (a, b, lambda, dt) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 const smooth = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const asset = window.FAIR_ASSET || ((p) => p);
 
 const PILLARS = [
-  { label: 'Spirit', img: 'assets/img/brand/pillar-spirit.svg' },
-  { label: 'Mind', img: 'assets/img/brand/pillar-mind.svg' },
-  { label: 'Body', img: 'assets/img/brand/pillar-body.svg' },
-  { label: 'Heart', img: 'assets/img/brand/pillar-heart.svg' }
+  { label: 'Spirit', img: asset('assets/img/brand/pillar-spirit.svg') },
+  { label: 'Mind', img: asset('assets/img/brand/pillar-mind.svg') },
+  { label: 'Body', img: asset('assets/img/brand/pillar-body.svg') },
+  { label: 'Heart', img: asset('assets/img/brand/pillar-heart.svg') }
 ];
 
 /* ---------- shaders ---------- */
@@ -226,8 +227,8 @@ export async function createWorld(opts) {
     im.onerror = () => { tick(); res(null); };
     im.src = url;
   });
-  const imagesP = Promise.all(books.map((b) => loadImage(`assets/img/covers/${b.slug}-${Q.cover}.webp`)));
-  const brandP = Promise.all(['assets/img/brand/logo.svg', ...PILLARS.map((p) => p.img)].map((u) => new Promise((res) => {
+  const imagesP = Promise.all(books.map((b) => loadImage(asset(`assets/img/covers/${b.slug}-${Q.cover}.webp`))));
+  const brandP = Promise.all([asset('assets/img/brand/logo.svg'), ...PILLARS.map((p) => p.img)].map((u) => new Promise((res) => {
     const im = new Image();
     im.onload = () => res(im);
     im.onerror = () => res(null);
@@ -1883,7 +1884,7 @@ export async function createWorld(opts) {
       b.bk.front.emissiveMap = t;
       b.bk.front.needsUpdate = true;
     };
-    im.src = `assets/img/covers/${b.book.slug}-full.webp`;
+    im.src = asset(`assets/img/covers/${b.book.slug}-full.webp`);
   }
 
   /* ---------- adaptive quality ---------- */
