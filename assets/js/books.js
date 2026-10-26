@@ -504,11 +504,13 @@ window.FAIR_AUTHOR_EXTRAS = {
     interview: 'https://www.lifecoachcode.com/2024/07/28/find-life-coach-soonjin-cho/'
   },
   'edith-moricz': {
+    photo: 'assets/img/authors/edith-moricz.webp',
     inbox: 'edith.t.moriczrfc@gmail.com',
     linkedin: 'https://www.linkedin.com/in/edithmoricz/',
     profile: 'https://www.lifecoachcode.com/members/edith/'
   },
   'chuck-barnard': {
+    photo: 'assets/img/authors/chuck-barnard.webp',
     inbox: 'charles.barnard@successinstitutes.co',
     website: 'https://coachchuck360.com/',
     linkedin: 'https://www.linkedin.com/in/chuck-barnard-6304b154/',
@@ -545,6 +547,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     profile: 'https://www.lifecoachcode.com/members/jessica-fuentes/'
   },
   'jennifer-a-schmeisser': {
+    photo: 'assets/img/authors/jennifer-a-schmeisser.webp',
     inbox: 'jensmizer@yahoo.com',
     linkedin: 'https://www.linkedin.com/in/jenniferschmeisser7/',
     profile: 'https://www.lifecoachcode.com/members/jennifer-schmeisser/'
@@ -556,6 +559,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     profile: 'https://www.lifecoachcode.com/members/monika-maria/'
   },
   'beth-donovan': {
+    photo: 'assets/img/authors/beth-donovan.webp',
     inbox: 'BethD101@comcast.net',
     linkedin: 'https://www.linkedin.com/in/beth-donovan-9663a7142/',
     profile: 'https://www.lifecoachcode.com/members/beth-donovan/'
@@ -573,6 +577,7 @@ window.FAIR_AUTHOR_EXTRAS = {
     interview: 'https://www.lifecoachcode.com/2023/09/06/find-life-coach-rachel-tamilio/'
   },
   'dolores-fazzino': {
+    photo: 'assets/img/authors/dolores-fazzino.webp',
     inbox: 'doloresfazzino@gmail.com',
     website: 'https://drdoloresfazzino.com/',
     linkedin: 'https://www.linkedin.com/in/doloresfazzino/',
