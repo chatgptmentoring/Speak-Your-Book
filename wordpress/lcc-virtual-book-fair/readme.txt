@@ -2,7 +2,7 @@
 Contributors: lifecoachcode
 Requires at least: 5.8
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 
 The Virtual Book Fair of Life Coach Code as a full-screen page on this site: a walkable 3D book
@@ -15,16 +15,19 @@ authors.
    /virtual-book-fair/: preview it, then publish it.
    (Or choose the template "Virtual Book Fair (full screen)" for any page.)
 3. On the same settings screen, as they are confirmed: the event's start time, the Zoom and
-   live-stream links and who speaks when; the OpenAI key for the guide; the authors' email
-   addresses for messages. Click "Send me a test email" to check that this site can send email.
+   live-stream links and the programme (one line per talk or break, e.g.
+   "5:00 pm | Chuck Barnard | Raising resilient teens | 20" or "5:20 pm | Break"); the OpenAI key
+   for the guide; the authors' email addresses for "Send a message".
 
 == Notes ==
 - The fair uses the whole page, without the theme's header and footer.
 - If the site uses a page cache, it is cleared for the fair's page when the settings are saved.
   If visitors still see the old version, purge the cache.
 - If a security plugin blocks the WordPress REST API for visitors, allow /wp-json/lcc-fair/v1/.
-- Messages to authors are sent with the site's own email (wp_mail). If the test email does not
-  arrive, set up an SMTP plugin or ask the host.
+- "Send a message" opens a ready-written email in Gmail or the visitor's own email app; the
+  visitor sends it from their own address, so the site sends no email itself.
+- Visitors can set reminders for talks (30, 10 and 5 minutes before); between the talks the
+  fair offers a breathing minute, wishing lanterns and the Book Oracle's three questions.
 - Live presence (visitors seeing each other) runs through a free public relay, not this server.
 - The earlier "LCC Virtual Book Fair Guide" plugin is no longer needed; its OpenAI key carries over.
 - Deleting the plugin removes its settings; the page stays.

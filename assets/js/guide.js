@@ -54,6 +54,7 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
   const evStatus = () => (eventInfo ? eventInfo.status() : null);
   const upcoming = () => !!(eventInfo && eventInfo.upcoming());
   const scheduleFor = (id) => ((EVENT && EVENT.schedule) || []).filter((s) => s.author === id);
+  const remindable = (a) => !!a && upcoming() && act.canRemind(a.id);
 
   function findAuthor(q) {
     let best = null, score = 0;
@@ -113,10 +114,11 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       const slots = scheduleFor(a.id);
       reply += slots.length ? `\n\n**${a.displayName}** speaks at ${slots.map((s) => `**${s.time}**${s.title ? ` (*${s.title}*)` : ''}`).join(', ')}.` : `\n\n**${a.displayName}** is one of the speakers; the order of the talks hasn’t been published here yet.`;
     } else if (sched.length) {
-      reply += '\n\n**The programme:**\n' + sched.map((s) => `- **${s.time}** · ${authorById[s.author] ? authorById[s.author].displayName : s.author}${s.title ? `: *${s.title}*` : ''}`).join('\n');
+      reply += '\n\n**The programme** (in your time zone):\n' + sched.map((s) => `- **${s.time}** · ${s.break ? `*${s.title || 'Break'}*` : `${authorById[s.author] ? authorById[s.author].displayName : s.author}${s.title ? `: *${s.title}*` : ''}`}`).join('\n');
     }
     const zoom = EVENT.stream && EVENT.stream.zoom;
     const actions = [{ type: 'link', label: 'Register free', url: EVENT.register }, ...(zoom ? [{ type: 'link', label: 'Join on Zoom', url: zoom }] : []), { type: 'event' }];
+    if (remindable(a)) actions.unshift({ type: 'remind', id: a.id });
     if (act.canWatch()) actions.unshift({ type: 'watch' });
     return { reply, actions };
   }
@@ -164,6 +166,20 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       actions: [{ type: 'link', label: 'Solutions for coaches', url: LINKS.solutions }, { type: 'goto', place: 'about' }]
     };
   }
+  function remindAnswer(q) {
+    const a = findAuthor(q);
+    if (remindable(a)) {
+      const s = scheduleFor(a.id).find((x) => x.start > new Date());
+      return { reply: `I can remind you about **${a.displayName}** at **${s.time}**: 30, 10 and 5 minutes before, while the fair is open. For your phone, add it to your calendar too.`, actions: [{ type: 'remind', id: a.id }] };
+    }
+    const any = AUTHORS.filter(remindable);
+    if (any.length) return { reply: 'Whose talk would you like a reminder for? Each talk in the programme has a **Remind me** button: you get a reminder 30, 10 and 5 minutes before.', actions: [{ type: 'event' }, ...any.slice(0, 2).map((x) => ({ type: 'remind', id: x.id }))] };
+    return { reply: 'The times of the talks aren’t in the fair yet. Once they are, every talk gets a **Remind me** button. Registering is the best way to receive them.', actions: [{ type: 'event' }] };
+  }
+  const ACTIVITIES = {
+    reply: 'Between the talks you can:\n- **Breathe** for a guided minute with the four pillars\n- Release a **wishing lantern** with an intention, and watch it rise\n- Ask **the Oracle**: three questions, and the book you need right now',
+    actions: [{ type: 'breathe' }, { type: 'lantern' }, { type: 'quiz' }]
+  };
   const HELP = {
     passport: 'Every booth you open stamps your **Fair Passport** (top bar). Collect all of them for a certificate with your name.',
     map: 'The **map** (press **M**) jumps anywhere: every booth, the stage, the Oracle and the temple.',
@@ -179,6 +195,11 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
     if (!q || has(q, /^(hi|hello|hey|help|hola|good (morning|afternoon|evening))\b|what can you do/)) return welcome();
     if (has(q, /\b(create|write|publish|make|start|speak)\b.*\b(my|own|a)\b.*\bbook\b|\bspeak your book\b|\bbecome an? (author|writer)\b|\bpublish(ing|ed)?\b|\bdiscovery call\b/)) return sybAnswer();
     if (has(q, /\b(watch|stream|livestream|zoom|join (the )?(talk|event|call))\b/)) return watchAnswer();
+    if (has(q, /\b(remind|reminders?|alarm|alert|notify|notification)\b/)) return remindAnswer(q);
+    if (has(q, /\b(breathe|breathing|breath|meditat\w*|relax|calm|stress\w*|anxious|mindful\w*)\b/)) return { reply: 'Take a **breathing minute** with the four pillars: Spirit, Mind, Body and Heart. One or three minutes, with a voice to guide you if you like.', actions: [{ type: 'breathe' }] };
+    if (has(q, /\b(lanterns?|intentions?|wish|wishes|wishing|gratitude)\b/)) return { reply: 'Write an intention, a wish or a word of gratitude on a **wishing lantern** and let it rise over the fair. Everyone here sees it float up; your words stay yours, and you can keep them as a card.', actions: [{ type: 'lantern' }] };
+    if (has(q, /\b(quiz|which book|what book|recommend\w*|suggest\w*|right book|book for me|what should i read)\b/)) return { reply: 'Ask **the Oracle**: answer three questions and it turns over the book you need right now, with two more for you.', actions: [{ type: 'quiz' }] };
+    if (has(q, /\b(things to do|activities|intermission|between (the )?(talks|sessions)|while (i )?wait\w*|bored)\b/) || (has(q, /\bbreak\b/) && !has(q, /\b(when|time)\b/))) return ACTIVITIES;
     if (has(q, /\b(when|what time|time|schedule|programme|program|agenda|date|starts?|today|tonight|register|registration|event)\b/) && !has(q, /\b(take me|go to|walk me)\b/)) return eventAnswer(q);
     if (has(q, /\b(who|which authors?)\b.*\b(speak|speaking|talk|talking|on stage|present)|\bspeakers?\b|\bline ?up\b/)) return speakersAnswer();
     const goto = has(q, /\b(take me|go to|walk me|lead me|guide me|bring me|where is|where s|how do i get|show me (the way|where))\b/);
@@ -224,7 +245,8 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       fair: `The Virtual Book Fair: a walkable 3D book fair floating in space, hosted by Life Coach Code. ${BOOKS.length} booths, each with a book, a hologram of its author and a themed piece. Visitors walk with W A S D or a joystick, press E to interact, M for the map, T for a guided tour, P for a photo. Every booth opened stamps the Fair Passport.`,
       host: { name: 'Life Coach Code', about: 'A home for coaches and seekers, built on four pillars: Spirit, Mind, Body and Heart. Helps coaches get seen, get heard and get published.', solutions: ['Publishing: Speak Your Book', 'Visibility: features and media', 'Recognition: awards and honours', 'Stages: summits and events'], links: LINKS },
       speakYourBook: ['Book a free discovery call', 'Speak your story in your own voice', 'Watch it become a book', 'Take your place at the fair'],
-      event: EVENT && { name: EVENT.name, date: eventInfo.dateLong(), startTime: eventInfo.time() || 'not announced yet', where: EVENT.where, price: EVENT.price, register: EVENT.register, about: EVENT.about, status: st && st.count, schedule: EVENT.schedule || [], streamInTheFair: act.canWatch() },
+      event: EVENT && { name: EVENT.name, date: eventInfo.dateLong(), startTime: eventInfo.time() || 'not announced yet', where: EVENT.where, price: EVENT.price, register: EVENT.register, about: EVENT.about, status: st && st.count, schedule: (EVENT.schedule || []).map((s) => ({ time: s.time, author: s.author, break: !!s.break, title: s.title || '', canRemind: !!(s.start && s.start > new Date()) })), timesAreInTheVisitorsTimeZone: true, streamInTheFair: act.canWatch() },
+      activities: ['A guided breathing minute with the four pillars (action breathe)', 'A wishing lantern: write an intention and let it rise over the fair; others see it rise, the words stay private (action lantern)', 'The Book Oracle: three questions that point to the right book (action quiz)', 'Reminders for a talk, 30, 10 and 5 minutes before (action remind with the author id)'],
       places: [{ id: 'welcome', label: 'Entrance' }, { id: 'hall', label: 'Grand Hall' }, { id: 'oracle', label: 'Book Oracle' }, { id: 'speak', label: 'Speak Your Book stage' }, { id: 'about', label: 'Temple of Life Coach Code' }, { id: 'finale', label: 'Pedestal for your book' }, ...BOOKS.map((b) => ({ id: place(b.slug), label: b.title }))],
       books: BOOKS.map((b) => ({ slug: b.slug, place: place(b.slug), title: b.title, subtitle: b.subtitle, author: b.displayAuthor || b.author, authorId: authorOf[b.slug] && authorOf[b.slug].id, status: b.status || 'published', hook: b.hook, description: b.description.join(' '), inside: b.inside, forWho: b.forWho, steps: b.steps && b.steps.items.map((s) => `${s.name}: ${s.text}`), stand: STANDS[b.slug], amazon: b.amazon && b.amazon.url })),
       authors: AUTHORS.map((a) => ({ id: a.id, name: a.displayName, credentials: a.credentials, bio: a.bio || '', books: a.books, website: a.website, linkedin: a.linkedin, profile: a.profile, interview: a.interview, canReceiveMessages: !!a.inbox }))
@@ -256,7 +278,8 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       const ok = (x.type === 'goto' && (bySlug[String(x.place).replace(/^book-/, '')] || PLACES.some((p) => p.id === x.place)))
         || (x.type === 'book' && bySlug[x.slug]) || (x.type === 'author' && authorById[x.id])
         || (x.type === 'message' && authorById[x.id] && authorById[x.id].inbox)
-        || (x.type === 'link' && urls.has(x.url)) || ['event', 'creator', 'tour'].includes(x.type) || (x.type === 'watch' && act.canWatch());
+        || (x.type === 'link' && urls.has(x.url)) || ['event', 'creator', 'tour', 'breathe', 'lantern', 'quiz'].includes(x.type) || (x.type === 'watch' && act.canWatch())
+        || (x.type === 'remind' && authorById[x.id] && act.canRemind(x.id));
       const key = JSON.stringify(x);
       if (!ok || seen.has(key)) return false;
       seen.add(key);
@@ -274,6 +297,10 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       case 'creator': return 'Design my cover';
       case 'tour': return 'Start the guided tour';
       case 'watch': return '● Watch live';
+      case 'remind': return `🔔 Remind me: ${authorById[x.id].displayName}`;
+      case 'breathe': return 'Breathe for a minute';
+      case 'lantern': return 'Release a lantern';
+      case 'quiz': return 'Ask the Oracle';
       default: return '';
     }
   }
@@ -289,9 +316,13 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
       case 'creator': act.creator(); break;
       case 'tour': act.tour(); setOpen(false); break;
       case 'watch': act.watch(); break;
+      case 'remind': act.remind(x.id); break;
+      case 'breathe': act.breathe(); setOpen(false); break;
+      case 'lantern': act.lantern(); setOpen(false); break;
+      case 'quiz': act.quiz(); break;
       default:
     }
-    if (window.matchMedia('(max-width: 760px)').matches && ['goto', 'book', 'author', 'event', 'creator', 'watch', 'message'].includes(x.type)) setOpen(false);
+    if (window.matchMedia('(max-width: 760px)').matches && ['goto', 'book', 'author', 'event', 'creator', 'watch', 'message', 'quiz'].includes(x.type)) setOpen(false);
   }
 
   /* ---------- the conversation ---------- */
@@ -353,7 +384,8 @@ export function createGuide({ data, act, zone, eventInfo, track = () => {}, stor
     const b = here && here.startsWith('book-') ? bySlug[here.slice(5)] : null;
     if (b) return ['Tell me about this booth', `Who is ${authorOf[b.slug] ? authorOf[b.slug].displayName : 'the author'}?`, 'Take me to the next booth', 'When is the live event?'];
     if (here === 'speak' || here === 'event') return ['When is the live event?', 'Who is speaking?', 'How can I watch?', 'How can I create my book?'];
-    return ['When is the live event?', 'Who is speaking?', 'Show me a book about healing', 'How can I create my own book?'];
+    if (here === 'about') return ['Breathe with me', 'Release a wishing lantern', 'Who is Life Coach Code?', 'How can I create my own book?'];
+    return ['When is the live event?', 'Which book is right for me?', 'Things to do between the talks', 'How can I create my own book?'];
   }
   function renderChips() {
     chipsEl.innerHTML = '';

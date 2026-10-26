@@ -18,7 +18,8 @@ const THEMES = {
   'healing-unraveled': 'birds',
   'life-is-happening-now': 'leaves',
   'truly-yours-life': 'dawn',
-  'curiously-certain': 'plucks'
+  'curiously-certain': 'plucks',
+  'how-to-build-yourself-up': 'dawn'
 };
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const rnd = (a, b) => a + Math.random() * (b - a);

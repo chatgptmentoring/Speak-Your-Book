@@ -1085,6 +1085,54 @@ export function createProps(ctx) {
       glow.position.y = 1.0;
       g.add(glow);
       return { group: g, update() {}, colliders: [[0, 0, 0.62]] };
+    },
+
+    // Pain turned into a staircase: the stones of a broken wall climb into steps of light,
+    // rising towards a wing of colourful feathers, as on the cover
+    'how-to-build-yourself-up'() {
+      const g = new THREE.Group();
+      g.add(plinth(0.55));
+      const stone = new THREE.MeshStandardMaterial({ color: 0x8a7f74, roughness: 0.95 });
+      // the wall, broken on the side where the steps begin
+      [[0, 4], [1, 3], [2, 2]].forEach(([row, n]) => {
+        for (let c = 0; c < n; c++) {
+          const b = box(0.15, 0.085, 0.12, stone);
+          b.position.set(-0.46 + c * 0.155 + (row % 2) * 0.075, 0.125 + row * 0.09, -0.12);
+          b.rotation.y = (c % 2 ? 1 : -1) * 0.04;
+          g.add(b);
+        }
+      });
+      // the staircase: each step glows warmer as it climbs
+      const warm = [0x6f6a66, 0x8a6a4a, 0xa8743c, 0xc98a3a, 0xe0a24a, 0xf0b860];
+      const steps = warm.map((col, i) => {
+        const m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.6, emissive: new THREE.Color(0xffa040), emissiveIntensity: 0.05 + i * 0.09 });
+        const s = box(0.2, 0.05, 0.16, m);
+        s.position.set(-0.08 + i * 0.085, 0.2 + i * 0.16, 0.02 - i * 0.03);
+        s.rotation.y = -0.25;
+        g.add(s);
+        return m;
+      });
+      // the wing of feathers waiting at the top
+      const wingTex = wingTexture();
+      const wing = new THREE.Group();
+      wing.position.set(0.42, 1.38, -0.1);
+      const feathers = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), additive(wingTex, 0xffffff, 0.8));
+      feathers.position.set(0.28, 0.12, 0);
+      feathers.scale.x = -1;
+      wing.add(feathers);
+      const light = sprite(0xffb060, 1.5, 0.55);
+      light.position.set(0.42, 1.3, -0.05);
+      g.add(wing, light, sparks({ n: 40, w: 0.7, d: 0.5, y: 0.3, h: 1.6, color: 0xffc070, k: 2.2, size: 0.028, rise: 0.8 }));
+      return {
+        group: g,
+        update(t) {
+          wing.rotation.z = Math.sin(t * 0.8) * 0.08;
+          wing.position.y = 1.38 + Math.sin(t * 0.6) * 0.04;
+          const k = (t * 1.1) % 8;
+          steps.forEach((m, i) => { m.emissiveIntensity = 0.05 + i * 0.09 + 0.5 * Math.max(0, 1 - Math.abs(k - i)); });
+        },
+        colliders: [[0, 0, 0.58]]
+      };
     }
   });
 

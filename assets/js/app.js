@@ -7,9 +7,10 @@ import { createLive, EMOTES } from './live.js';
 import * as K from './keepsakes.js';
 import { createAmbience } from './ambience.js';
 import { createGuide } from './guide.js';
+import { createProgram, scoreQuiz } from './program.js';
 
 const BOOKS = window.FAIR_BOOKS || [];
-const INTENTS = window.FAIR_INTENTS || [];
+const QUIZ = window.FAIR_QUIZ || [];
 const STORES = window.FAIR_STORES || [];
 const LINKS = window.FAIR_LINKS || {};
 const EVENT = window.FAIR_EVENT || null;
@@ -100,6 +101,7 @@ function makeSheet(id, { onOpen, onClose } = {}) {
 /* =========================================================================
    The live event: dates, countdown and every place that mentions it
    ========================================================================= */
+const Program = createProgram(EVENT);
 const EventInfo = (() => {
   if (!EVENT) return null;
   const [y, m, d] = EVENT.date.split('-').map(Number);
@@ -118,7 +120,8 @@ const EventInfo = (() => {
         if (h >= 1) return { phase: 'soon', short: `in ${h} h ${mins} min`, count: `Starts in ${plural(h, 'hour')} ${mins} min`, big: `${h}h`, label: `${mins} MIN TO GO` };
         return { phase: 'soon', short: `in ${mins} min`, count: `Starts in ${plural(mins, 'minute')}`, big: String(mins), label: 'MINUTES TO GO' };
       }
-      if (now - start < 3 * 36e5) return { phase: 'live', short: 'happening now', count: 'Happening now on Zoom', big: 'LIVE', label: 'HAPPENING NOW' };
+      const lastEnd = Program.timed().reduce((m, s) => Math.max(m, +s.end), 0);
+      if (now - start < 3 * 36e5 || now < lastEnd) return { phase: 'live', short: 'happening now', count: 'Happening now on Zoom', big: 'LIVE', label: 'HAPPENING NOW' };
       return { phase: 'after', short: '', count: '', big: 'THANK YOU', label: 'FOR JOINING US LIVE' };
     }
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -897,7 +900,7 @@ function interact(info) {
       Context.show('oracle');
       Context.expand();
       Sound.play('flip');
-      setTimeout(() => { const c = $('#oracle-chips .chip'); if (c && finePointer) c.focus({ preventScroll: true }); }, 200);
+      setTimeout(Oracle.focus, 200);
       break;
     case 'stage':
       if (world) world.pulse('stage');
@@ -1026,13 +1029,11 @@ function initKeys() {
 }
 
 /* =========================================================================
-   The Book Oracle
+   The Book Oracle: three questions, and the book that is waiting for you
    ========================================================================= */
-function initOracle() {
-  const chips = $('#oracle-chips'), card = $('#oracle-card'), front = $('#oracle-front');
-  let last = null, busy = false;
-  chips.innerHTML = INTENTS.map((it, i) => `<button class="chip" type="button" data-intent="${i}" aria-pressed="false">${esc(it.label)}</button>`).join('') +
-    '<button class="chip chip--surprise" type="button" data-intent="surprise" aria-pressed="false">✦ Surprise me</button>';
+const Oracle = (() => {
+  const box = $('#oracle-chips'), card = $('#oracle-card'), front = $('#oracle-front'), more = $('#oracle-more');
+  let answers = [], last = null, busy = false;
   const frontHTML = (b) => `<img class="of__cover" src="${coverSrc(b, 480)}" alt="Cover of ${esc(b.title)}">
     <div class="of__text"><p class="of__eyebrow">The Oracle reveals</p>
     <h3 class="of__title">${esc(b.title)}</h3>
@@ -1050,20 +1051,59 @@ function initOracle() {
     };
     if (card.classList.contains('is-flipped')) { card.classList.remove('is-flipped'); setTimeout(flip, reduceMotion ? 0 : 650); } else flip();
   }
-  chips.addEventListener('click', (e) => {
-    const c = e.target.closest('[data-intent]');
-    if (!c || busy) return;
-    $$('[data-intent]', chips).forEach((x) => x.setAttribute('aria-pressed', x === c ? 'true' : 'false'));
-    const key = c.getAttribute('data-intent');
-    let pool = key === 'surprise' ? BOOKS.slice() : INTENTS[+key].books.map((s) => bySlug[s]).filter(Boolean);
-    if (pool.length > 1) pool = pool.filter((b) => b !== last);
-    reveal(pool[Math.floor(Math.random() * pool.length)]);
-  });
-  card.addEventListener('click', (e) => {
-    const w = e.target.closest('[data-walk]');
-    if (w) goPlace('book-' + w.getAttribute('data-walk'));
-  });
-}
+  function ask() {
+    const i = answers.length;
+    const q = QUIZ[i];
+    box.innerHTML = `<p class="oq__step"><span>${i + 1} of ${QUIZ.length}</span>${i ? '<button class="text-link" type="button" data-oq-back>Back</button>' : ''}</p>
+      <p class="oq__q">${esc(q.q)}</p>
+      <div class="oq__opts">${q.options.map((o, k) => `<button class="chip" type="button" data-oq="${k}">${esc(o.label)}</button>`).join('')}
+      ${i === 0 ? '<button class="chip chip--surprise" type="button" data-oq="surprise">✦ Surprise me</button>' : ''}</div>`;
+  }
+  function done(best, also, mine) {
+    box.innerHTML = `${mine ? `<p class="oq__why"><span>You asked for</span> ${answers.map((k, i) => `<b>${esc(QUIZ[i].options[k].label)}</b>`).join(' · ')}</p>` : ''}
+      <p class="oq__step"><button class="text-link" type="button" data-oq-again>Ask the Oracle again</button></p>`;
+    more.hidden = !also.length;
+    more.innerHTML = also.length ? `<p class="oq__also">Also for you</p><div class="oq__books">${also.map((b) => `<button type="button" data-open="${b.slug}"><img src="${coverSrc(b, 480)}" alt="" loading="lazy"><span><b>${esc(b.title)}</b><small>${esc(authorName(b))}</small></span></button>`).join('')}</div>` : '';
+    reveal(best);
+  }
+  function answer(k) {
+    if (busy) return;
+    if (k === 'surprise') {
+      const pool = BOOKS.filter((b) => b !== last);
+      done(pool[Math.floor(Math.random() * pool.length)], [], false);
+      track('oracle_surprise');
+      return;
+    }
+    answers.push(+k);
+    if (answers.length < QUIZ.length) { ask(); Sound.play('pop'); return; }
+    let ranked = scoreQuiz(QUIZ, answers, BOOKS).map((x) => x.b);
+    if (ranked.length > 1 && ranked[0] === last) ranked = [...ranked.slice(1, 2), ranked[0], ...ranked.slice(2)];
+    const best = ranked[0] || BOOKS[Math.floor(Math.random() * BOOKS.length)];
+    done(best, ranked.filter((b) => b !== best).slice(0, 2), true);
+    track('oracle_quiz', { book: best.slug });
+  }
+  function restart() {
+    answers = [];
+    more.hidden = true;
+    card.classList.remove('is-flipped');
+    ask();
+  }
+  function init() {
+    if (!QUIZ.length) return;
+    ask();
+    box.addEventListener('click', (e) => {
+      const o = e.target.closest('[data-oq]');
+      if (o) { answer(o.getAttribute('data-oq')); return; }
+      if (e.target.closest('[data-oq-back]')) { answers.pop(); ask(); }
+      if (e.target.closest('[data-oq-again]')) restart();
+    });
+    card.addEventListener('click', (e) => {
+      const w = e.target.closest('[data-walk]');
+      if (w) goPlace('book-' + w.getAttribute('data-walk'));
+    });
+  }
+  return { init, restart, focus: () => { const c = $('[data-oq]', box); if (c && finePointer) c.focus({ preventScroll: true }); } };
+})();
 
 /* =========================================================================
    The live event: HUD pill, ribbons, the event card, the panel and the stage screens
@@ -1072,12 +1112,30 @@ const EventUI = (() => {
   const sheet = makeSheet('event-panel', { onOpen: () => { render(); track('event_panel'); } });
   let lastBig = '';
   const setText = (key, v) => $$(`[data-event="${key}"]`).forEach((el) => { el.textContent = v; });
+  // during the event: who is speaking now, or how long until the next talk
+  const firstName = (a) => a.displayName.replace(/^(Dr|Prof)\.\s+/, '').split(/\s+/)[0];
+  function now() {
+    if (!EventInfo || !['today', 'soon', 'live'].includes(EventInfo.status().phase)) return null;
+    const ps = Program.state();
+    if (!ps || (ps.kind !== 'talk' && ps.kind !== 'break')) return null;
+    const s = ps.kind === 'talk' ? ps.cur : ps.next;
+    const a = s && authorById[s.author];
+    return a ? { ...ps, s, a } : null;
+  }
   function screens(st) {
     const after = st.phase === 'after';
+    const n = now();
+    let countdown = after
+      ? { eyebrow: EVENT.name.toUpperCase(), big: 'THANK YOU', label: 'FOR JOINING US LIVE', line: 'Your book could be next', cta: 'FREE DISCOVERY CALL · PRESS E' }
+      : { eyebrow: `${EVENT.name} · ${EVENT.where}`.toUpperCase(), big: st.big, label: st.label, line: `${EventInfo.dateLong()} · ${EVENT.price.toLowerCase()}`, cta: isEventDay() && ZOOM ? 'JOIN ON ZOOM · PRESS E' : 'REGISTER FREE · PRESS E' };
+    if (n && n.kind === 'talk') {
+      countdown = { eyebrow: `NOW SPEAKING · ${EVENT.where}`.toUpperCase(), big: 'LIVE', label: n.a.displayName.toUpperCase(), line: n.s.title || EVENT.name, cta: LiveStream.available() ? 'WATCH HERE OR JOIN ON ZOOM · PRESS E' : 'JOIN ON ZOOM · PRESS E' };
+    } else if (n && n.kind === 'break') {
+      const m = Program.minsTo(n.s);
+      countdown = { eyebrow: 'BETWEEN THE TALKS', big: String(m), label: m === 1 ? 'MINUTE TO THE NEXT TALK' : 'MINUTES TO THE NEXT TALK', line: `Next: ${n.a.displayName} · ${n.s.time}`, cta: 'BREATHE · LANTERNS · THE ORACLE' };
+    }
     return {
-      countdown: after
-        ? { eyebrow: EVENT.name.toUpperCase(), big: 'THANK YOU', label: 'FOR JOINING US LIVE', line: 'Your book could be next', cta: 'FREE DISCOVERY CALL · PRESS E' }
-        : { eyebrow: `${EVENT.name} · ${EVENT.where}`.toUpperCase(), big: st.big, label: st.label, line: `${EventInfo.dateLong()} · ${EVENT.price.toLowerCase()}`, cta: isEventDay() && ZOOM ? 'JOIN ON ZOOM · PRESS E' : 'REGISTER FREE · PRESS E' },
+      countdown,
       lineup: { eyebrow: after ? 'THE AUTHORS OF THE FAIR' : 'SPEAKING LIVE AT THE EVENT', title: 'Meet the authors', names: AUTHORS.map((a) => a.displayName), foot: 'Find each of them at their booth' }
     };
   }
@@ -1124,13 +1182,38 @@ const EventUI = (() => {
     if (cta && ZOOM && !after && !$('[data-zoom]', cta)) cta.insertAdjacentHTML('afterbegin', `<a class="btn btn--ghost btn--lg btn--zoom" data-zoom href="${esc(ZOOM)}" target="_blank" rel="noopener">${ZOOM_ICON} Join on Zoom</a>`);
     $$('[data-zoom]').forEach((z) => { z.hidden = after || !ZOOM; if (ZOOM) z.href = ZOOM; z.classList.toggle('btn--gold', isEventDay()); z.classList.toggle('btn--ghost', !isEventDay()); });
     if (isEventDay()) setText('pill-sub', 'join on Zoom now');
+    const n = now();
+    if (n && n.kind === 'talk') { setText('pill', `Now: ${n.a.displayName}`); setText('pill-sub', 'speaking live · join on Zoom'); }
+    if (n && n.kind === 'break') { setText('pill', `Next: ${firstName(n.a)} · ${n.s.time}`); setText('pill-sub', `in ${Program.minsTo(n.s)} min · a break to enjoy the fair`); }
+    Between.check(n);
     $('#event-pill').hidden = after;
     $$('.event-ribbon').forEach((r) => { r.hidden = after; });
     $('#event-pill').classList.toggle('is-live', live);
-    if (world && st.big !== lastBig) { lastBig = st.big; world.setScreens(screens(st)); }
+    const sc = screens(st);
+    const key = JSON.stringify(sc.countdown);
+    if (world && key !== lastBig) { lastBig = key; world.setScreens(sc); }
+  }
+  function programme() {
+    const list = Program.timed();
+    $('#ev-prog').hidden = !list.length;
+    if (!list.length) return;
+    const ps = Program.state();
+    $('#ev-programme').innerHTML = list.map((s) => {
+      const on = ps && ps.cur === s;
+      if (s.break) {
+        return `<li class="pg__item pg__item--break${on ? ' is-now' : ''}"><time>${esc(s.time)}</time>
+          <span><b>${esc(s.title || 'Break')}</b><small>Breathe, release a lantern, ask the Oracle</small></span>
+          ${on ? '<button class="chip" type="button" data-do="between">Things to do</button>' : ''}</li>`;
+      }
+      const a = authorById[s.author];
+      return `<li class="pg__item${on ? ' is-now' : ''}"><time>${esc(s.time)}</time>${a ? avatar(a, true) : ''}
+        <span><b>${esc(a ? a.displayName : s.author)}</b>${s.title ? `<small>${esc(s.title)}</small>` : ''}</span>
+        ${on ? '<em>● Speaking now</em>' : Reminders.button(s)}</li>`;
+    }).join('');
   }
   function render() {
     fill();
+    programme();
     $('#ev-lineup').innerHTML = AUTHORS.map((a) => {
       const b = bySlug[a.books[0]];
       const here = People.isOnline(a.id);
@@ -1161,7 +1244,127 @@ const EventUI = (() => {
       if (e.target.closest('[data-seat]')) { sheet.close(); takeSeat(); }
     });
   }
-  return { init, open: () => sheet.open(), signs, refresh: fill };
+  return { init, open: () => sheet.open(), signs, refresh: fill, now, rerender: () => { if (sheet.isOpen()) programme(); } };
+})();
+
+/* =========================================================================
+   Reminders for the talks: 30, 10 and 5 minutes before, and when it starts
+   ========================================================================= */
+const Reminders = (() => {
+  const KEY = 'lcc-fair-reminders', DONE = 'lcc-fair-reminded';
+  const STEPS = [30, 10, 5, 0];
+  const keys = new Set(store.get(KEY, []) || []);
+  let actx = null;
+  const nameOf = (s) => (authorById[s.author] ? authorById[s.author].displayName : 'The next speaker');
+  const has = (s) => !!s && keys.has(s.key);
+  // a soft bell that rings even with the fair's music off (the click that set the reminder allows it)
+  function prime() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch (e) { actx = null; } }
+  function ring() {
+    if (!actx) return;
+    try {
+      actx.resume();
+      [880, 1175, 1568].forEach((f, i) => {
+        const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * 0.22;
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+        o.connect(g);
+        g.connect(actx.destination);
+        o.start(t);
+        o.stop(t + 1.5);
+      });
+    } catch (e) { /* decorative */ }
+  }
+  function button(s, cls = 'chip') {
+    if (!s || s.start <= new Date()) return '';
+    const on = has(s);
+    return `<button class="${cls} chip--remind" type="button" data-remind="${esc(s.key)}" aria-pressed="${on}">${on ? '✓ Reminder set' : '🔔 Remind me'}</button>`;
+  }
+  function paint() {
+    $$('[data-remind]').forEach((b) => {
+      const on = keys.has(b.getAttribute('data-remind'));
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.textContent = on ? '✓ Reminder set' : '🔔 Remind me';
+    });
+  }
+  function save() { store.set(KEY, [...keys]); paint(); }
+  function calendar(s) {
+    const blob = new Blob([Program.ics(s, { authorName: nameOf(s), zoom: ZOOM, pageUrl: location.origin + location.pathname })], { type: 'text/calendar' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${s.author}-talk.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    track('reminder_calendar', { author: s.author });
+  }
+  function set(s) {
+    if (!s || s.start <= new Date()) return;
+    prime();
+    keys.add(s.key);
+    save();
+    Sound.play('stamp');
+    track('reminder_set', { author: s.author });
+    toast(`<i>🔔</i> We’ll remind you 30, 10 and 5 minutes before <b>${esc(nameOf(s))}</b> (${esc(s.time)}) while the fair is open. For a reminder on your phone, add it to your calendar.`, 9000, { label: 'Add to calendar', fn: () => calendar(s) });
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+    check();
+  }
+  function toggle(s) {
+    if (!s) return;
+    if (has(s)) { keys.delete(s.key); save(); toast(`<i>✓</i> Reminder for ${esc(nameOf(s))} removed`); } else set(s);
+  }
+  function alert(s, mins) {
+    const who = nameOf(s);
+    const text = mins > 0 ? `${who} speaks in ${mins} minute${mins === 1 ? '' : 's'}` : `${who} is speaking now`;
+    const go = LiveStream.available() ? { label: 'Watch here', fn: () => LiveStream.open() }
+      : ZOOM ? { label: 'Join on Zoom', fn: () => { window.open(ZOOM, '_blank', 'noopener'); track('zoom_join', { from: 'reminder' }); } }
+        : { label: 'The programme', fn: () => EventUI.open() };
+    toast(`<i>🔔</i> <b>${esc(text)}</b>${s.title ? ` · <em>${esc(s.title)}</em>` : ''}`, 20000, go);
+    ring();
+    if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
+    if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
+      try {
+        const n = new Notification(text, { body: `${s.title ? s.title + ' · ' : ''}${EVENT.name}, live on Zoom`, icon: asset('assets/img/brand/logo-512.png'), tag: s.key });
+        n.onclick = () => { window.focus(); n.close(); };
+      } catch (e) { /* notifications are a bonus */ }
+    }
+    track('reminder_alert', { author: s.author, mins });
+  }
+  function check() {
+    if (!keys.size) return;
+    const now = new Date();
+    const done = store.get(DONE, {}) || {};
+    let dirty = false;
+    keys.forEach((k) => {
+      const s = Program.byKey(k);
+      if (!s) return;
+      const left = (s.start - now) / 6e4;
+      const due = STEPS.filter((m) => left <= m);
+      if (!due.length || left < -10) return;
+      // only the latest reminder that is due: earlier ones are skipped if the fair was closed
+      const step = Math.min(...due);
+      if ((done[k] || []).includes(step)) return;
+      done[k] = due;
+      dirty = true;
+      alert(s, Math.max(0, Math.ceil(left)));
+    });
+    if (dirty) store.set(DONE, done);
+  }
+  function init() {
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-remind]');
+      if (b) toggle(Program.byKey(b.getAttribute('data-remind')));
+    });
+    setInterval(check, 15000);
+    document.addEventListener('visibilitychange', check);
+    check();
+  }
+  return {
+    init, button, toggle, check,
+    setFor(id) { const s = Program.talksBy(id).find((x) => x.start > new Date()); if (s && !has(s)) set(s); return !!s; },
+    canFor: (id) => Program.talksBy(id).some((x) => x.start > new Date())
+  };
 })();
 
 function takeSeat() {
@@ -1187,6 +1390,7 @@ const AuthorPanel = (() => {
         <span class="au__status${here ? ' is-online' : ''}"><i></i>${here ? 'Here at the fair now' : EventInfo && EventInfo.upcoming() ? `Speaking live · ${esc(EventInfo.dayShort())}` : 'Author at the fair'}</span>
         ${a.websiteByLCC ? '<span class="au__badge" title="Life Coach Code helped create this website">✦ Website made with Life Coach Code</span>' : ''}
       </div>
+      ${talkHtml(a)}
       ${bioHtml(a)}
       ${a.welcome ? `<blockquote class="bi__hook">${esc(a.welcome)}</blockquote>` : ''}
       ${a.voice ? `<p class="au__voice"><span>A welcome from ${esc(a.displayName)}</span><audio controls preload="none" src="${esc(a.voice)}"></audio></p>` : ''}
@@ -1197,7 +1401,16 @@ const AuthorPanel = (() => {
         ${here ? `<button class="btn btn--ghost" type="button" data-wave="${here.id}">Wave hello 👋</button><button class="btn btn--ghost" type="button" data-go="${here.id}">Walk over</button>` : ''}
         ${inboxOf(a) ? '<button class="btn btn--ghost" type="button" data-msg>Send a message ✉</button>' : ''}
       </div>
-      ${inboxOf(a) ? messageForm(a) : ''}`;
+      ${inboxOf(a) ? mailHtml(a) : ''}`;
+  }
+  function talkHtml(a) {
+    const talks = Program.talksBy(a.id);
+    if (!talks.length) return '';
+    const now = new Date();
+    return talks.map((s) => {
+      const when = s.end <= now ? 'Spoke live at' : s.start <= now ? 'Speaking live now, since' : 'Speaks live at';
+      return `<p class="au__talk"><span>${when} <b>${esc(s.time)}</b>${s.title ? ` · <em>${esc(s.title)}</em>` : ''}</span>${Reminders.button(s)}</p>`;
+    }).join('');
   }
   function bioHtml(a) {
     if (!a.bio) return '';
@@ -1208,65 +1421,44 @@ const AuthorPanel = (() => {
     const l = [[a.website, 'Website'], [a.linkedin, 'LinkedIn'], [a.profile, 'Life Coach Code profile'], [a.interview, 'Interview']].filter(([u]) => u);
     return l.length ? `<p class="au__links">${l.map(([u, t]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${t} <span aria-hidden="true">↗</span></a>`).join('')}</p>` : '';
   }
-  // where a message to this author is emailed: their own inbox, or Life Coach Code's to pass along
+  // where a message to this author goes: their own inbox, or Life Coach Code's to pass along
   const inboxOf = (a) => (CONTACT.enabled ? (a.inbox || CONTACT.fallbackInbox || '').trim() : '');
-  function messageForm(a) {
+  // the visitor writes from their own email: a new message opens, addressed and already begun
+  function draft(a) {
     const own = !!(a.inbox || '').trim();
-    return `<form class="au__msg" id="au-msg" hidden novalidate>
-      <h3 class="bi__h">A message for ${esc(a.displayName)}</h3>
-      <label><span>Your name</span><input name="name" type="text" required maxlength="80" autocomplete="name"></label>
-      <label><span>Your email</span><input name="email" type="email" required maxlength="120" autocomplete="email"></label>
-      <label><span>Your message</span><textarea name="message" required maxlength="2000" rows="5" placeholder="What would you like to say or ask?"></textarea></label>
-      <input class="au__hp" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
-      <div class="card__actions"><button class="btn btn--gold" type="submit">Send message</button><button class="text-link" type="button" data-msg-cancel>Cancel</button></div>
-      <p class="au__msg-status" role="status" aria-live="polite"></p>
-      <p class="sheet__fine">Your name, email and message are emailed ${own ? `to ${esc(a.displayName)}` : `to Life Coach Code, who will pass them to ${esc(a.displayName)}`}, so they can reply to you directly. Sent securely ${CONTACT.via === 'site' ? 'by Life Coach Code' : 'with FormSubmit'}.</p>
-    </form>`;
+    const first = a.name.split(/\s+/)[0];
+    const books = a.books.map((s) => bySlug[s].title);
+    const about = books.length === 1 ? `your book ${books[0]}` : 'your books';
+    const me = People.myName();
+    const body = [
+      own ? `Hello ${first},` : `Hello Life Coach Code, please pass this message on to ${a.displayName}.\n\nHello ${first},`,
+      '',
+      `I visited your booth at the Virtual Book Fair by Life Coach Code and wanted to write to you about ${about}.`,
+      '',
+      '',
+      '',
+      'Warm regards,',
+      me || ''
+    ].join('\n');
+    return { to: inboxOf(a), subject: own ? `Hello from the Virtual Book Fair` : `For ${a.displayName}: a message from the Virtual Book Fair`, body };
   }
-  async function send(form) {
-    const a = authorById[currentId];
-    const status = $('.au__msg-status', form);
-    const btn = $('button[type="submit"]', form);
-    const v = (n) => form.elements.namedItem(n).value.trim();
-    const data = { name: v('name'), email: v('email'), message: v('message') };
-    const fail = (msg) => { status.textContent = msg; status.className = 'au__msg-status is-err'; };
-    if (!data.name || !data.message) return fail('Please add your name and a message.');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return fail('Please check your email address so they can reply.');
-    if (v('_honey')) return; // a bot filled the hidden field
-    const key = 'lcc-fair-msg-' + a.id;
-    if (Date.now() - (store.get(key, 0) || 0) < 60000) return fail('Your message is on its way. Please wait a minute before sending another.');
-    btn.disabled = true;
-    status.textContent = 'Sending…';
-    status.className = 'au__msg-status';
-    try {
-      const inbox = inboxOf(a).replace(/[^\w@.+-]/g, '');
-      // on the WordPress site the message goes through the site itself, which keeps the authors' addresses private
-      const res = CONTACT.via === 'site' ? await fetch(CONTACT.endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ ...data, author: a.id })
-      }) : await fetch((CONTACT.endpoint || 'https://formsubmit.co/ajax/') + inbox, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          author: a.displayName,
-          books: a.books.map((s) => bySlug[s].title).join(', '),
-          _subject: `A message for ${a.displayName} from the Virtual Book Fair`,
-          _template: 'box',
-          _captcha: 'false'
-        })
-      });
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok || String(out.success) !== 'true') throw new Error(out.message || res.status);
-      store.set(key, Date.now());
-      form.innerHTML = `<p class="au__msg-done"><b>Message sent ✓</b>Thank you, ${esc(data.name.split(' ')[0])}. ${esc(a.displayName)} will reply to ${esc(data.email)}.</p>`;
-      Sound.play('win');
-      track('author_message', { author: a.id });
-    } catch (err) {
-      btn.disabled = false;
-      fail('The message could not be sent just now. Please try again in a moment.');
-    }
+  function mailHtml(a) {
+    const d = draft(a);
+    const enc = encodeURIComponent;
+    const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(d.to)}&su=${enc(d.subject)}&body=${enc(d.body)}`;
+    const app = `mailto:${d.to}?subject=${enc(d.subject)}&body=${enc(d.body.replace(/\n/g, '\r\n'))}`;
+    const own = !!(a.inbox || '').trim();
+    // phones open their own mail app (often Gmail itself); computers open Gmail in a new tab
+    const btns = [
+      `<a class="btn ${finePointer ? 'btn--gold' : 'btn--ghost'}" href="${esc(gmail)}" target="_blank" rel="noopener" data-mail="gmail">Write in Gmail</a>`,
+      `<a class="btn ${finePointer ? 'btn--ghost' : 'btn--gold'}" href="${esc(app)}" data-mail="app">${finePointer ? 'Other email app' : 'Open my email app'}</a>`
+    ];
+    if (!finePointer) btns.reverse();
+    return `<div class="au__msg" id="au-msg" hidden>
+      <h3 class="bi__h">Write to ${esc(a.displayName)}</h3>
+      <p class="au__msg-lead">A new email opens, addressed and already begun. Add your words and send it from your own email${own ? `: ${esc(a.name.split(/\s+/)[0])} replies to you directly` : `. Life Coach Code passes it on to ${esc(a.displayName)}`}.</p>
+      <div class="card__actions">${btns.join('')}<button class="text-link" type="button" data-mail="copy">Copy the address</button></div>
+    </div>`;
   }
   function open(id, { message = false } = {}) {
     if (!authorById[id]) return;
@@ -1287,13 +1479,21 @@ const AuthorPanel = (() => {
     if (f && e.target.closest('[data-msg]')) {
       f.hidden = false;
       f.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
-      setTimeout(() => f.elements.namedItem('name').focus({ preventScroll: true }), 250);
-      if (!f.elements.namedItem('name').value) f.elements.namedItem('name').value = People.myName();
+      setTimeout(() => { const first = $('[data-mail]', f); if (first) first.focus({ preventScroll: true }); }, 250);
     }
-    if (f && e.target.closest('[data-msg-cancel]')) f.hidden = true;
+    const m = e.target.closest('[data-mail]');
+    if (m) {
+      const a = authorById[currentId];
+      const via = m.getAttribute('data-mail');
+      track('author_email', { author: a.id, via });
+      if (via === 'copy') {
+        const to = inboxOf(a);
+        const done = () => toast(`<i>✓</i> ${esc(to)} copied`);
+        if (navigator.clipboard) navigator.clipboard.writeText(to).then(done, () => window.prompt('Copy this address', to));
+        else window.prompt('Copy this address', to);
+      }
+    }
   });
-  sheet.el.addEventListener('submit', (e) => { if (e.target.id === 'au-msg') { e.preventDefault(); send(e.target); } });
-  sheet.el.addEventListener('input', (e) => { const st = e.target.form && $('.au__msg-status.is-err', e.target.form); if (st) { st.textContent = ''; st.className = 'au__msg-status'; } });
   return { open, refresh: () => { if (sheet.isOpen() && !$('#au-msg:not([hidden])', sheet.el)) render(); } };
 })();
 
@@ -1346,6 +1546,7 @@ const People = (() => {
         Sound.play('wave');
       } else Sound.play('pop');
     }
+    if (ev.k === 'lantern') Lantern.fromPeer(ev.peer);
     if (ev.k === 'author-here') {
       const a = authorById[ev.peer.author.id];
       if (!a) return;
@@ -1474,6 +1675,7 @@ const People = (() => {
   }
   return {
     init, start, wave, emote, goTo,
+    lantern: () => !!(live && status === 'live' && me.visible && live.lantern()),
     open: () => sheet.open(),
     isOnline: (id) => !!id && (online.has(id) || id === selfAuthor),
     onlinePeer: (id) => online.get(id) || null,
@@ -1743,7 +1945,7 @@ const Tour = (() => {
     steps = [
       { id: 'welcome', title: 'Welcome to the fair', text: 'Life Coach Code is your host. Every book in this hall was written by a coach, a therapist or a leader. Let’s walk it together.' },
       { id: 'hall', title: 'The Grand Hall', text: `${BOOKS.length} booths, each with a book, its author beside it, and a piece that carries the spirit of the story.` },
-      { id: 'oracle', title: 'The Book Oracle', text: 'Not sure where to begin? Choose an intention and the Oracle turns over the book that is waiting for you.' },
+      { id: 'oracle', title: 'The Book Oracle', text: 'Not sure where to begin? Answer three questions and the Oracle turns over the book that is waiting for you.' },
       ...BOOKS.map((b, k) => ({
         id: 'book-' + b.slug,
         title: `Booth ${k + 1} · ${b.title}`,
@@ -1858,6 +2060,10 @@ function doAction(name) {
     case 'watch': LiveStream.open(); break;
     case 'passport': Passport.open(); break;
     case 'mybooth': AuthorHi.go(); break;
+    case 'between': Between.open(); break;
+    case 'breathe': Breathe.open(); break;
+    case 'lantern': Lantern.open(); break;
+    case 'quiz': Oracle.restart(); goPlace('oracle'); Context.expand(); setTimeout(Oracle.focus, 400); break;
     default:
   }
 }
@@ -1918,6 +2124,173 @@ const LiveStream = (() => {
     }
   }
   return { init, open, close, available: () => !!src, isOn: () => !!src && ['live', 'today', 'soon'].includes(phase()) };
+})();
+
+/* =========================================================================
+   Between the talks: what is on now and next, and three things to do meanwhile
+   ========================================================================= */
+const Between = (() => {
+  const el = $('#between');
+  const SEEN = 'lcc-fair-between';
+  function render(n) {
+    const next = $('#bt-next');
+    const ps = n ? null : Program.state();
+    const up = n ? n : ps && ps.next && authorById[ps.next.author] ? { kind: 'break', s: ps.next, a: authorById[ps.next.author] } : null;
+    const talk = !!up && up.kind === 'talk';
+    $('#bt-eyebrow').textContent = talk ? 'Speaking now' : n ? 'Between the talks' : 'Things to do';
+    $('#bt-title').textContent = talk ? 'While you listen, wander' : 'Take a moment in the fair';
+    next.hidden = !up;
+    if (!up) return;
+    const { s, a } = up;
+    const go = talk
+      ? `${LiveStream.available() ? '<button class="btn btn--gold btn--sm" type="button" data-do="watch">Watch here</button>' : ''}${ZOOM ? `<a class="btn btn--ghost btn--sm btn--zoom" href="${esc(ZOOM)}" target="_blank" rel="noopener">${ZOOM_ICON} Join on Zoom</a>` : ''}`
+      : `${Reminders.button(s, 'btn btn--ghost btn--sm')}<button class="btn btn--ghost btn--sm" type="button" data-place="book-${a.books[0]}">Visit the booth</button>`;
+    const when = talk ? 'Now speaking' : `Next up · ${s.time}${s.start > new Date() ? ` · in ${Program.minsTo(s)} min` : ''}`;
+    next.innerHTML = `<div class="between__who">${avatar(a, true)}<span><small>${esc(when)}</small><b>${esc(a.displayName)}</b>${s.title ? `<em>${esc(s.title)}</em>` : ''}</span></div><div class="card__actions">${go}</div>`;
+  }
+  function open(n) { render(n || EventUI.now()); el.hidden = false; track('between_open'); }
+  function close() { el.hidden = true; }
+  // called every 30 seconds: at the start of each break the card appears once by itself
+  function check(n) {
+    if (!el.hidden) render(n || EventUI.now());
+    if (!n || n.kind !== 'break') return;
+    let seen = '';
+    try { seen = sessionStorage.getItem(SEEN) || ''; sessionStorage.setItem(SEEN, n.s.key); } catch (e) { /* private mode */ }
+    if (seen === n.s.key) return;
+    if (!Overlays.size && !Detail.isOpen() && !Tour.isActive()) open(n);
+    else toast('<i>✦</i> A break between the talks', 7000, { label: 'Things to do', fn: () => open() });
+  }
+  function init() {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-between-close], [data-do]')) { close(); return; }
+      const p = e.target.closest('[data-place]');
+      if (p) { close(); goPlace(p.getAttribute('data-place')); }
+    });
+    el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
+  }
+  return { init, open, close, check };
+})();
+
+/* =========================================================================
+   A breathing minute with the four pillars
+   ========================================================================= */
+const Breathe = (() => {
+  const sheet = makeSheet('breathe', { onClose: () => stop() });
+  const orb = $('#br-orb'), cue = $('#br-cue'), word = $('#br-word'), left = $('#br-left');
+  const PHASES = [['in', 'Breathe in', 4], ['hold', 'Hold', 2], ['out', 'Breathe out', 6]];
+  const WORDS = [['Spirit', 'I am guided'], ['Mind', 'I am clear'], ['Body', 'I am here'], ['Heart', 'I am loved']];
+  const synth = window.speechSynthesis || null;
+  let minutes = 1, timer = 0, tick = 0, endAt = 0, cycle = 0, running = false;
+  function say(text) {
+    if (!synth || !$('#br-voice').checked) return;
+    try { synth.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 0.8; u.pitch = 0.95; synth.speak(u); } catch (e) { /* voice is a bonus */ }
+  }
+  function clock() {
+    const s = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+    left.textContent = `${Math.floor(s / 60)}:${pad2(s % 60)}`;
+  }
+  function phase(i) {
+    if (!running) return;
+    if (i === 0 && Date.now() >= endAt) { finish(); return; }
+    const [k, text, sec] = PHASES[i];
+    if (i === 0) {
+      const w = WORDS[cycle % WORDS.length];
+      word.innerHTML = `<b>${w[0]}</b> · ${w[1]}`;
+      cycle++;
+    }
+    orb.style.setProperty('--dur', `${sec}s`);
+    orb.dataset.phase = k;
+    cue.textContent = text;
+    say(text);
+    timer = setTimeout(() => phase((i + 1) % PHASES.length), sec * 1000);
+  }
+  function start() {
+    running = true;
+    cycle = 0;
+    endAt = Date.now() + minutes * 60000;
+    $('#br-setup').hidden = true;
+    $('#br-run').hidden = false;
+    clock();
+    tick = setInterval(clock, 500);
+    track('breathe_start', { minutes });
+    phase(0);
+  }
+  function stop() {
+    running = false;
+    clearTimeout(timer);
+    clearInterval(tick);
+    if (synth) synth.cancel();
+    orb.dataset.phase = '';
+    $('#br-setup').hidden = false;
+    $('#br-run').hidden = true;
+    cue.textContent = 'Sit comfortably, soften your shoulders.';
+    word.textContent = '';
+  }
+  function finish() {
+    running = false;
+    clearInterval(tick);
+    orb.dataset.phase = 'rest';
+    cue.textContent = 'Welcome back.';
+    word.innerHTML = '<b>✦</b> Take this calm with you through the fair.';
+    say('Welcome back.');
+    Sound.play('win');
+    track('breathe_done', { minutes });
+    timer = setTimeout(() => { sheet.close(); toast('<i>✦</i> A calmer breath, a clearer heart. Welcome back to the fair.', 5000); }, 4500);
+  }
+  function init() {
+    sheet.el.addEventListener('click', (e) => {
+      const m = e.target.closest('[data-br-min]');
+      if (m) { minutes = +m.getAttribute('data-br-min'); $$('[data-br-min]', sheet.el).forEach((x) => x.setAttribute('aria-pressed', x === m ? 'true' : 'false')); }
+    });
+    $('#br-start').addEventListener('click', start);
+    $('#br-stop').addEventListener('click', () => { stop(); sheet.close(); });
+  }
+  return { init, open() { stop(); sheet.open(); track('breathe_open'); } };
+})();
+
+/* =========================================================================
+   Wishing lanterns: write an intention, let it rise for everyone in the fair to see
+   ========================================================================= */
+const Lantern = (() => {
+  const sheet = makeSheet('lantern-panel', { onOpen: () => setTimeout(() => { if (finePointer) $('#lt-text').focus({ preventScroll: true }); }, 80) });
+  const IDEAS = ['The courage to begin', 'Healing for my family', 'Gratitude for the people who carried me', 'May my story help someone', 'Peace in my heart'];
+  let lastToast = 0;
+  function card(text) {
+    const c = K.makeIntentionCard({ text, name: People.myName(), logo: LOGO, lines: { footer: 'The Virtual Book Fair · Life Coach Code' } });
+    Keepsake.show(c, { title: 'Your intention', eyebrow: 'A wishing lantern from the fair', filename: 'my-intention.jpg', text: 'My wishing lantern from the Virtual Book Fair by Life Coach Code.' });
+    track('lantern_card');
+  }
+  function release(text) {
+    sheet.close();
+    track('lantern_release', { shared: People.lantern() });
+    if (!world) { if (text) card(text); return; }
+    world.releaseLantern({ mine: true });
+    Sound.play('win');
+    setTimeout(() => toast('<i>✦</i> Your lantern is rising over the fair. Look up.', 9000, text ? { label: 'Keep my words', fn: () => card(text) } : null), 600);
+  }
+  function fromPeer(peer) {
+    if (!world) return;
+    world.releaseLantern(world.peerPos(peer.id) || {});
+    if (Date.now() - lastToast < 15000) return;
+    lastToast = Date.now();
+    const who = peer.author ? peer.author.name : peer.name || 'A visitor';
+    toast(`<i>✦</i> ${esc(who)} released a wishing lantern`, 5000, { label: 'Release one too', fn: open });
+  }
+  function open() { sheet.open(); track('lantern_open'); }
+  function init() {
+    $('#lt-ideas').innerHTML = IDEAS.map((t) => `<button class="chip" type="button" data-idea>${esc(t)}</button>`).join('');
+    sheet.el.addEventListener('click', (e) => {
+      const i = e.target.closest('[data-idea]');
+      if (i) { $('#lt-text').value = i.textContent; $('#lt-text').focus({ preventScroll: true }); }
+    });
+    $('#lt-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = $('#lt-text').value.replace(/\s+/g, ' ').trim().slice(0, 120);
+      $('#lt-text').value = '';
+      release(text);
+    });
+  }
+  return { init, open, fromPeer };
 })();
 
 let Guide = null;
@@ -2042,7 +2415,7 @@ async function boot() {
   Detail.init();
   MapPanel.init();
   Prompt.init();
-  initOracle();
+  Oracle.init();
   initLinks();
   initKeys();
   initJoystick();
@@ -2054,6 +2427,10 @@ async function boot() {
   Tour.init();
   More.init();
   LiveStream.init();
+  Reminders.init();
+  Between.init();
+  Breathe.init();
+  Lantern.init();
   const G = window.FAIR_GUIDE || {};
   if (G.enabled !== false) {
     Guide = createGuide({
@@ -2071,7 +2448,13 @@ async function boot() {
         creator: () => Creator.open(),
         tour: () => Tour.start(),
         watch: () => LiveStream.open(),
-        canWatch: () => LiveStream.available()
+        canWatch: () => LiveStream.available(),
+        remind: (id) => Reminders.setFor(id),
+        canRemind: (id) => Reminders.canFor(id),
+        breathe: () => Breathe.open(),
+        lantern: () => Lantern.open(),
+        quiz: () => doAction('quiz'),
+        between: () => Between.open()
       }
     });
     Guide.hello();

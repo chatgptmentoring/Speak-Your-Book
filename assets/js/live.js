@@ -125,7 +125,8 @@ export function createLive(cfg, { authors = [], onPeers, onEvent, onStatus }) {
   const peers = new Map();
   let client = null, brokerIdx = 0, failures = 0, retry = 0, status = 'off', stopped = true;
   let me = { name: '', hue: Math.floor(Math.random() * 360), author: null, key: null, sig: null, t: 0 };
-  let visible = true, state = null, lastSent = 0, lastPayload = '', lastHiReply = 0, lastEmote = 0, beat = 0, resign = 0;
+  let visible = true, state = null, lastSent = 0, lastPayload = '', lastHiReply = 0, lastEmote = 0, lastLantern = 0, beat = 0, resign = 0;
+  const lanternFrom = new Map();
 
   const setStatus = (s) => { if (s !== status) { status = s; onStatus(s); } };
   const emitPeers = () => onPeers([...peers.values()].filter((p) => p.x != null));
@@ -252,6 +253,14 @@ export function createLive(cfg, { authors = [], onPeers, onEvent, onStatus }) {
         if (!p) return;
         onEvent({ k: 'emote', peer: p, emote: m.e, toMe: m.to === id });
       }
+      // a wishing lantern: only that one rose, never the words written on it
+      if (m.k === 'lantern') {
+        const p = peers.get(m.f);
+        const now = performance.now();
+        if (!p || now - (lanternFrom.get(m.f) || -1e9) < 15000) return;
+        lanternFrom.set(m.f, now);
+        onEvent({ k: 'lantern', peer: p });
+      }
     }
   }
 
@@ -313,6 +322,13 @@ export function createLive(cfg, { authors = [], onPeers, onEvent, onStatus }) {
       if (!EMOTE_IDS.has(e) || now - lastEmote < 700) return false;
       lastEmote = now;
       send('e', { k: 'emote', e, to });
+      return true;
+    },
+    lantern() {
+      const now = performance.now();
+      if (now - lastLantern < 15000) return false;
+      lastLantern = now;
+      send('e', { k: 'lantern' });
       return true;
     },
     status: () => status,

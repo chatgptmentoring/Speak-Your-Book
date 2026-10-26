@@ -12,7 +12,7 @@ event and discover how to speak their own book (free discovery call).
 - **The entrance**: the Life Coach Code crest crowns the arch, with a gold medallion, laurels, a
   turning ring of text, a sunburst and searchlights. The logo is also inlaid in the plaza floor and
   flies on flags from the lamp posts. Two easels carry the poster for the live event.
-- **A candlelit hall of 15 booths** (9 published books and 6 coming soon). Each booth has a poster,
+- **A candlelit hall of 16 booths** (9 published books and 7 coming soon). Each booth has a poster,
   the book on a pedestal, and a hand-made piece that carries the spirit of the book. *Food Isn't
   the Problem* has its 3-Step Path: Name it, Claim it, Reframe it.
 - **Meet the authors**: beside every booth the author waits as a hologram, with their portrait
@@ -29,9 +29,21 @@ event and discover how to speak their own book (free discovery call).
   Authors who open their private link glow gold, and their booth hologram says *Here now*.
 - **Your book at the fair**: a gold *Make your book* button is always in reach. Design a cover
   (title, name, style), set it on the last pedestal, then take home a postcard of it.
+- **The programme and reminders**: once the talk times are set, the event panel lists every talk
+  in each visitor's own time zone. **Remind me** alerts them in the fair 30, 10 and 5 minutes
+  before a talk and when it starts (with a sound, and a browser notification if allowed), and
+  offers a calendar file with the same three reminders for their phone.
+- **Between the talks**: the top bar and the stage screens show who is speaking now, or who is
+  next and in how many minutes. When a break starts, a card offers three things to do meanwhile:
+  - **Breathe**: a guided breathing minute (or three) with the four pillars, Spirit, Mind, Body
+    and Heart, with an optional voice. Also from the temple.
+  - **Wishing lantern**: write an intention and release it; it rises over the fair, and everyone
+    there at that moment sees it float up. The words stay private, and can be kept as a card.
+  - **The Book Oracle**: three questions (what the heart asks for, who the book is for, how they
+    like to read) and the Oracle turns over the right book, with two more suggestions.
 - **Guided tour** with captions and optional spoken narration, **photo mode** with a Life Coach
   Code frame, a **Fair Passport** with a certificate for touring every booth, generative **music**
-  with a spatial soundscape per booth, the **Book Oracle**, and a **map**.
+  with a spatial soundscape per booth, and a **map**.
 
 ## Controls
 
@@ -42,6 +54,7 @@ event and discover how to speak their own book (free discovery call).
 | `E` to interact with what you're facing (books, authors, seats, people) | The `E` button (bottom right) |
 | Click any book to open it, click an open book to turn its pages | Tap any book to open it |
 | `M` map, `P` photo, `T` guided tour, `1` to `5` reactions, `Esc` to leave a booth | The `⋯` menu in the top bar |
+| *Between the talks* (breathe, lantern, Oracle) in the `⋯` menu | The same |
 
 On phones the fair opens clean: no cards, logo or buttons over the view, just the 3D hall, the
 thumb joystick and the `E` button when something can be opened. Everything else (make your
@@ -62,10 +75,19 @@ with its AI guide and the messages to authors running on the site's own server.
    choose the template **Virtual Book Fair (full screen)** in the page's settings.
 3. On the same settings screen, whenever they are confirmed:
    - **The live event:** start date and time, registration and Zoom links, the YouTube live
-     stream, and who speaks when (`5:00 pm GMT | Chuck Barnard | Raising resilient teens`).
+     stream, and the programme, one line per talk or break:
+
+     ```
+     5:00 pm | Chuck Barnard | Raising resilient teens | 20
+     5:20 pm | Break | Lanterns and a breathing minute
+     5:30 pm | Tanya Fasnacht Jolliffe | Peace with food
+     ```
+
+     (time | author | title | minutes). Times are in the site's time zone unless a line names
+     one (`5:00 pm GMT`); minutes is optional, and without it a talk lasts until the next line.
+     Visitors see each time in their own time zone and can set reminders.
    - **The AI guide:** the OpenAI API key (it stays on the server), the model and the limits.
-   - **Messages to authors:** each author's email address. Click **Send me a test email** to
-     check that the site can send email.
+   - **Messages to authors:** each author's email address.
    - **Visitors:** live presence on or off, and an optional Google Analytics ID (the fair page
      doesn't use the theme, so the site's usual tracking doesn't run there).
 4. Saving clears the fair page from the site's page cache. If visitors still see the old
@@ -105,8 +127,10 @@ python3 -m http.server 8000
 
 ## The live event
 
-On WordPress, set the start time, links, stream and schedule in **Settings → Virtual Book Fair**;
-they take precedence over `books.js`. Everything else about the event lives in `FAIR_EVENT` in
+On WordPress, set the start time, links, stream and programme in **Settings → Virtual Book Fair**;
+they take precedence over `books.js`. On GitHub Pages, the programme goes in `FAIR_EVENT.schedule`
+(see the example in `books.js`): each talk with its exact time (`at`, with its UTC offset), the
+author's id, a title and optional `minutes`, and breaks as `{ at, break: true, title }`. Everything else about the event lives in `FAIR_EVENT` in
 `assets/js/books.js`: the date, the registration form, the Zoom wording and the short description. The countdown, the top-bar pill,
 the posters, the stage screens, the calendar file and the event panel all read from it.
 
@@ -186,35 +210,27 @@ Vimeo links work too.
 
 ## Messages to authors
 
-Each author's panel can show a **Send a message** button. Visitors write their name, email and
-message, and it arrives in the author's inbox as an email they can simply reply to.
+Each author's panel can show a **Send a message** button. It opens a new email in Gmail (or, on
+phones and for anyone not using Gmail, the visitor's own email app), addressed to the author and
+already begun: "Hello Chuck, I visited your booth at the Virtual Book Fair…". The visitor adds
+their words and sends it from their own email, so the author simply replies. A **Copy the
+address** link covers any other webmail.
 
-**On lifecoachcode.com** the site sends the email itself, to the addresses in
-**Settings → Virtual Book Fair** (filled in from `books.js` at first). The addresses never appear
-in the page. Each visitor can send a few messages per hour, and a hidden field stops bots. Use
-**Send me a test email** to check that the site's email works; if it doesn't arrive, set up an
-SMTP plugin or ask the host.
-
-**On GitHub Pages** there is no server, so messages are delivered by FormSubmit
-(https://formsubmit.co, free):
-
-1. Each author's `inbox` in `FAIR_AUTHOR_EXTRAS` (`assets/js/books.js`) holds their email
-   address. Authors with an empty `inbox` show no button.
-2. Send one test message to each author. FormSubmit emails that inbox a one-time
-   **Activate** link; once it is clicked, every message arrives normally.
-3. Optional, for privacy: the activation email also gives a random alias for the address.
-   Put the alias in `inbox` instead of the email, so the address is not visible in the site's code.
-
-To route every message through Life Coach Code instead (for example for authors who prefer not
-to share an address), set `FAIR_CONTACT.fallbackInbox`; authors without their own inbox then
-get the button, and the visitor is told Life Coach Code will pass the message along.
+- On lifecoachcode.com the addresses are set in **Settings → Virtual Book Fair**; on GitHub Pages,
+  in each author's `inbox` in `FAIR_AUTHOR_EXTRAS` (`assets/js/books.js`). Authors without an
+  address show no button.
+- Visitors see the address they write to. On WordPress the addresses are lightly encoded in the
+  page so simple address-harvesting bots pass them by.
+- To route messages for authors without their own address through Life Coach Code, set
+  **For authors without an address** in the settings (or `FAIR_CONTACT.fallbackInbox`). The email
+  then asks Life Coach Code to pass it on.
 
 ## Live presence and privacy
 
 Visitors see each other through a public MQTT relay over a secure WebSocket (`FAIR_LIVE.brokers`).
-Only a first name (optional, letters only, filtered), a colour and the position in the fair are
-shared, and only with the people there at that moment. There are no messages, no accounts and
-nothing is stored. Visitors can hide themselves at any time in the *Who's here* panel.
+Only a first name (optional, letters only, filtered), a colour, the position in the fair and the
+moment someone releases a wishing lantern (never what they wrote on it) are shared, and only with
+the people there at that moment. There are no messages, no accounts and nothing is stored. Visitors can hide themselves at any time in the *Who's here* panel.
 
 - To turn presence off, set `FAIR_LIVE.enabled = false`.
 - The public relays are free and have no uptime guarantee. For a large audience you can point
@@ -235,7 +251,8 @@ event on `window`. To record them, add Plausible or Google Analytics to `index.h
 ## Editing content
 
 - **Books, links, copy:** `assets/js/books.js` (titles, hooks, descriptions, Amazon links,
-  colours, Oracle messages, coming-soon status). A coming-soon book uses
+  colours, Oracle messages, coming-soon status). The Oracle's three questions, and which books
+  each answer points to, are in `FAIR_QUIZ`. A coming-soon book uses
   `status: 'coming-soon'` and `amazon: null`.
 - **Adding a book:** run `python3 tools/make_covers.py path/to/cover.jpg my-book-slug` (needs
   Pillow), then add an entry with the same `slug` to `books.js`. New books automatically get a
@@ -272,6 +289,7 @@ assets/js/live.js        live presence (a small MQTT client) and author signatur
 assets/js/keepsakes.js   your cover, postcards, framed photos, certificates
 assets/js/ambience.js    the spatial soundscape of the booths
 assets/js/guide.js       the AI guide (built-in answers + OpenAI through the plugin)
+assets/js/program.js     the programme: now and next, reminders' calendar files, the Oracle's scoring
 assets/img/covers/       optimised covers (480 / 800 / full / glow)
 assets/img/originals/    the covers as supplied
 tools/make_covers.py     prepares covers for a new book

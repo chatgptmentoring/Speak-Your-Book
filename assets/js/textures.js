@@ -1277,13 +1277,19 @@ export function drawEventScreen(canvas, kind, d) {
   ctx.font = `700 ${Math.round(H * 0.052)}px ${SANS}`;
   spaced(ctx, d.eyebrow, W / 2, H * 0.12, H * 0.014);
   if (kind === 'countdown') {
+    // names and times change through the day: each line shrinks to fit its width
+    const fitFont = (font, size, text, maxW, spacing = 0) => {
+      ctx.font = font(size);
+      const w = spacing ? spacedWidth(ctx, text, spacing * size) : ctx.measureText(text).width;
+      if (w > maxW) ctx.font = font(Math.floor(size * maxW / w));
+    };
     ctx.font = `600 ${Math.round(H * (d.big.length > 3 ? 0.2 : 0.36))}px ${SERIF}`;
     ctx.fillStyle = goldGradient(ctx, 0, H * 0.25, 0, H * 0.55);
     ctx.fillText(d.big, W / 2, H * 0.4);
     ctx.fillStyle = '#fbf0dc';
-    ctx.font = `700 ${Math.round(H * 0.06)}px ${SANS}`;
-    spaced(ctx, d.label, W / 2, H * 0.6, H * 0.016);
-    ctx.font = `italic 500 ${Math.round(H * 0.075)}px ${SERIF}`;
+    fitFont((z) => `700 ${z}px ${SANS}`, Math.round(H * 0.06), d.label, W * 0.86, 0.27);
+    spaced(ctx, d.label, W / 2, H * 0.6, parseFloat(ctx.font.match(/(\d+)px/)[1]) * 0.27);
+    fitFont((z) => `italic 500 ${z}px ${SERIF}`, Math.round(H * 0.075), d.line, W * 0.88);
     ctx.fillStyle = 'rgba(251,240,220,.9)';
     ctx.fillText(d.line, W / 2, H * 0.72);
     const bw = W * 0.56, bh = H * 0.11;
@@ -1291,8 +1297,8 @@ export function drawEventScreen(canvas, kind, d) {
     ctx.fillStyle = goldGradient(ctx, 0, H * 0.8, 0, H * 0.91);
     ctx.fill();
     ctx.fillStyle = '#221606';
-    ctx.font = `700 ${Math.round(H * 0.045)}px ${SANS}`;
-    spaced(ctx, d.cta, W / 2, H * 0.857, H * 0.01);
+    fitFont((z) => `700 ${z}px ${SANS}`, Math.round(H * 0.045), d.cta, bw * 0.9, 0.22);
+    spaced(ctx, d.cta, W / 2, H * 0.857, parseFloat(ctx.font.match(/(\d+)px/)[1]) * 0.22);
   } else {
     ctx.font = `600 ${Math.round(H * 0.1)}px ${SERIF}`;
     ctx.fillStyle = goldGradient(ctx, 0, H * 0.16, 0, H * 0.28);

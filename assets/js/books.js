@@ -398,6 +398,31 @@ window.FAIR_BOOKS = [
     cover: { w: 1000, h: 1500 },
     colors: { spine: '#5a3a28', spineText: '#f6e3c8', glow: '#ffb877' },
     oracle: 'Pour a cup, take a breath. You don’t have to be perfect to begin.'
+  },
+  {
+    slug: 'how-to-build-yourself-up',
+    status: 'coming-soon',
+    title: 'How to Build Yourself Up in Difficult Times',
+    subtitle: 'Famous fables and a life lived, for anyone rebuilding',
+    author: 'Bengü Davchevski',
+    credentials: '',
+    tags: ['Resilience', 'Fables', 'Personal growth'],
+    aisles: ['healing', 'stories'],
+    hook: 'Some people turn pain into a wall and hide behind it. Some people turn pain into a staircase and rise by stepping on it.',
+    description: [
+      'How to Build Yourself Up in Difficult Times weaves famous fables together with Bengü Davchevski’s own life experience, to show how a person can rebuild themselves when life gets hard.',
+      'It is written for anyone: whatever you are going through, you will find yourself somewhere in its stories, and a next step to take.'
+    ],
+    inside: [
+      'Famous fables, read for hard times',
+      'Lessons from the author’s own life',
+      'Pain turned into a staircase, one step at a time'
+    ],
+    forWho: 'Anyone going through a difficult time and ready to rise from it.',
+    amazon: null,
+    cover: { w: 1024, h: 1536 },
+    colors: { spine: '#1c2c4a', spineText: '#f3e2bd', glow: '#f0a050' },
+    oracle: 'The pain you carry can become a staircase. Take the first step.'
   }
 ];
 
@@ -412,15 +437,43 @@ window.FAIR_AISLES = [
   { id: 'soon', label: 'Coming soon' }
 ];
 
-/* Intentions for the Book Oracle. The Oracle draws one book from the matching set. */
-window.FAIR_INTENTS = [
-  { label: 'Peace after heartbreak or loss', books: ['finding-love-in-the-mirror', 'everything-happens-for-you'] },
-  { label: 'To come home to myself', books: ['journey-to-empowerment', 'the-invisible-midlife-woman', 'life-is-happening-now'] },
-  { label: 'A clear next chapter', books: ['clarity-before-momentum', 'everything-happens-for-you'] },
-  { label: 'Healing for mind, body & spirit', books: ['conscious-integrative-therapy', 'food-isnt-the-problem', 'healing-unraveled', 'life-is-happening-now'] },
-  { label: 'Faith and courage to begin again', books: ['truly-yours-life', 'curiously-certain', 'everything-happens-for-you'] },
-  { label: 'Raising strong, happy kids', books: ['more-than-a-game', 'teen-mental-health', 'when-the-blueprint-burned'] },
-  { label: 'A story to get lost in', books: ['prince-and-the-prodigal', 'when-the-blueprint-burned', 'finding-love-in-the-mirror', 'truly-yours-life'] }
+/* The Book Oracle's three questions. Each answer leans towards some books; the weight says how
+   much the question counts (the first decides, the other two choose among its books). The book
+   with the most points is revealed, with two more for you. */
+window.FAIR_QUIZ = [
+  {
+    q: 'What is your heart asking for right now?',
+    weight: 5,
+    options: [
+      { label: 'Peace after heartbreak or loss', books: ['finding-love-in-the-mirror', 'everything-happens-for-you', 'truly-yours-life', 'how-to-build-yourself-up'] },
+      { label: 'To come home to myself', books: ['journey-to-empowerment', 'the-invisible-midlife-woman', 'finding-love-in-the-mirror', 'life-is-happening-now'] },
+      { label: 'A clear next chapter', books: ['clarity-before-momentum', 'curiously-certain', 'everything-happens-for-you'] },
+      { label: 'Healing for body and mind', books: ['food-isnt-the-problem', 'healing-unraveled', 'conscious-integrative-therapy', 'life-is-happening-now'] },
+      { label: 'Faith and courage to begin again', books: ['truly-yours-life', 'curiously-certain', 'everything-happens-for-you', 'how-to-build-yourself-up'] },
+      { label: 'Strong, happy children', books: ['teen-mental-health', 'more-than-a-game', 'when-the-blueprint-burned'] },
+      { label: 'A story to get lost in', books: ['prince-and-the-prodigal', 'when-the-blueprint-burned', 'truly-yours-life', 'finding-love-in-the-mirror'] }
+    ]
+  },
+  {
+    q: 'Who is the book for?',
+    weight: 2,
+    options: [
+      { label: 'For me', books: ['finding-love-in-the-mirror', 'the-invisible-midlife-woman', 'food-isnt-the-problem', 'journey-to-empowerment', 'everything-happens-for-you', 'healing-unraveled', 'life-is-happening-now', 'truly-yours-life', 'curiously-certain', 'clarity-before-momentum', 'how-to-build-yourself-up'] },
+      { label: 'For my family', books: ['teen-mental-health', 'more-than-a-game', 'when-the-blueprint-burned'] },
+      { label: 'For my work and the people I help', books: ['clarity-before-momentum', 'conscious-integrative-therapy', 'healing-unraveled', 'teen-mental-health', 'more-than-a-game'] },
+      { label: 'A gift for someone I love', books: ['prince-and-the-prodigal', 'finding-love-in-the-mirror', 'truly-yours-life', 'everything-happens-for-you', 'curiously-certain', 'how-to-build-yourself-up'] }
+    ]
+  },
+  {
+    q: 'How do you like to read?',
+    weight: 2,
+    options: [
+      { label: 'A true story that moves me', books: ['finding-love-in-the-mirror', 'when-the-blueprint-burned', 'life-is-happening-now', 'truly-yours-life', 'journey-to-empowerment'] },
+      { label: 'Practical steps I can use', books: ['clarity-before-momentum', 'teen-mental-health', 'more-than-a-game', 'food-isnt-the-problem', 'the-invisible-midlife-woman', 'conscious-integrative-therapy'] },
+      { label: 'Wisdom to reflect on', books: ['everything-happens-for-you', 'healing-unraveled', 'curiously-certain', 'journey-to-empowerment', 'how-to-build-yourself-up'] },
+      { label: 'A novel to get lost in', books: ['prince-and-the-prodigal'] }
+    ]
+  }
 ];
 
 /* Other Amazon stores readers can switch to (same ASIN). */
@@ -457,8 +510,13 @@ window.FAIR_EVENT = {
   // and paste the YouTube link here. Vimeo links work too. Visitors then watch in a window
   // beside them as they walk, or full screen. zoom: the join link, for anyone who wants to take part.
   stream: { url: '', zoom: 'https://us06web.zoom.us/j/83736821137' },
-  // Who speaks when, once it is decided. time: as visitors should read it, e.g. '5:00 pm GMT'.
-  // schedule: [{ time: '5:00 pm GMT', author: 'chuck-barnard', title: 'Raising resilient teens' }]
+  // Who speaks when, once it is decided (on WordPress: Settings > Virtual Book Fair). at: the exact
+  // time with its UTC offset; visitors see it in their own time zone and can set reminders.
+  // minutes is optional: without it a talk lasts until the next entry. Breaks: break: true.
+  // schedule: [
+  //   { at: '2026-11-01T17:00:00+00:00', author: 'chuck-barnard', title: 'Raising resilient teens', minutes: 20 },
+  //   { at: '2026-11-01T17:20:00+00:00', break: true, title: 'Lanterns and a breathing minute' }
+  // ]
   schedule: [],
   about: 'A free, live virtual event on Zoom, hosted by Life Coach Code. Every author in this fair speaks at the event: come and meet them live.'
 };
@@ -488,7 +546,8 @@ window.FAIR_LIVE = {
     'dolores-fazzino': 'BGttLQ4XqjkRbD43fCIcOa6sI1swNfeDEqVlyqvSCOfMzt246AWANtAqigQV2GxA7BSsiRFqaUkCslRfk6Yq3a0',
     'beth-donovan': 'BEQ8d1-pN4GOo_cJHkVo_KVljodSvqorIKo9OWjs5JFDgVhyhUPiDULHa6ukqmwDLTNW26i4f18SLtSyxh9U3tI',
     'yevheniya-shalimova': 'BLnYXR9oDNZq4gHd8cAPkUS4EWABKf2xVy4acktknH8WtuA8rK2YFOH_4oaK8NKpySf9YPtlo1k3Mp8Kauebnww',
-    'rachel-tamilio': 'BPmM0k6G13XIkh5AtFfF4kULlz6qlrU11gJ4lack8bmwqYusUEl3koIoUX1BS-kOTkFp6r6-tPuCBVNAZ9NQSfY'
+    'rachel-tamilio': 'BPmM0k6G13XIkh5AtFfF4kULlz6qlrU11gJ4lack8bmwqYusUEl3koIoUX1BS-kOTkFp6r6-tPuCBVNAZ9NQSfY',
+    'bengu-davchevski': 'BABPgnpAJkbjLJzvmBZMYt5YEusIn3DkGsFUKE_QArjd1R8w-T9sXfatI0Im4XIS7TMmczkYEIKHQ1eB1t-VI1Y'
   }
 
 };
@@ -502,7 +561,7 @@ window.FAIR_ANALYTICS = { enabled: false };
      voice: 'assets/audio/<id>.mp3' (a recorded welcome), website: 'https://...'
    ========================================================================= */
 window.FAIR_AUTHOR_EXTRAS = {
-  // inbox: where "Send a message" goes (see FAIR_CONTACT below). Leave it empty to hide the button.
+  // inbox: the address "Send a message" writes to (see FAIR_CONTACT below). Empty hides the button.
   // bio: shown in the author's panel and used by the guide. Keep it to what the author has published.
   'soonjin-cho': {
     photo: 'assets/img/authors/soonjin-cho.webp',
@@ -590,6 +649,11 @@ window.FAIR_AUTHOR_EXTRAS = {
     linkedin: 'https://www.linkedin.com/in/rtamilio/',
     interview: 'https://www.lifecoachcode.com/2023/09/06/find-life-coach-rachel-tamilio/'
   },
+  'bengu-davchevski': {
+    inbox: 'bengudavchevski@gmail.com',
+    linkedin: 'https://www.linkedin.com/in/bengu-davchevski-713039203/',
+    bio: 'Writes about rebuilding yourself in difficult times, drawing on famous fables and her own life experience.'
+  },
   'dolores-fazzino': {
     photo: 'assets/img/authors/dolores-fazzino.webp',
     inbox: 'doloresfazzino@gmail.com',
@@ -616,7 +680,8 @@ window.FAIR_STANDS = {
   'healing-unraveled': 'A golden birdcage with its door open and a radiant diamond inside.',
   'life-is-happening-now': 'A sunlit tree in a little park, a winding path of glowing footsteps leading to it, and a sign that says NOW.',
   'truly-yours-life': 'Sunflowers turning toward a warm light, with a letter signed “Truly yours” floating above them.',
-  'curiously-certain': 'A little café table with two steaming cups of coffee, set for a friendly conversation.'
+  'curiously-certain': 'A little café table with two steaming cups of coffee, set for a friendly conversation.',
+  'how-to-build-yourself-up': 'A broken wall whose stones climb into a staircase of light, rising towards a wing of colourful feathers: pain turned into a way up.'
 };
 
 /* =========================================================================
@@ -636,20 +701,16 @@ window.FAIR_GUIDE = {
 
 /* =========================================================================
    Messages to authors
-   Visitors can write to an author from the author's panel. On lifecoachcode.com the WordPress
-   plugin emails it from the site itself. On GitHub Pages it is emailed through FormSubmit
-   (https://formsubmit.co), so no server is needed. Either way the author can simply reply.
-   - inbox (per author, above): the author's email address, or better, the random alias that
-     FormSubmit sends after the first message is confirmed. The alias keeps the address out of
-     the public code.
-   - The first message to a new inbox triggers a one-time "Activate FormSubmit" email to that
-     inbox: click it once and every message after that arrives normally.
-   - fallbackInbox: a Life Coach Code inbox for authors who have no inbox of their own. Messages
+   "Send a message" in an author's panel opens a new email in Gmail (or the visitor's own email
+   app), addressed to the author and already begun. The visitor sends it from their own email,
+   so the author simply replies.
+   - inbox (per author, above): the author's email address. On lifecoachcode.com the addresses
+     are set in Settings > Virtual Book Fair instead.
+   - fallbackInbox: a Life Coach Code address for authors who have none of their own. Messages
      to those authors go there, to pass along.
    ========================================================================= */
 window.FAIR_CONTACT = {
   enabled: true,
-  endpoint: 'https://formsubmit.co/ajax/',
   fallbackInbox: ''
 };
 

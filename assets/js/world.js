@@ -1859,6 +1859,52 @@ export async function createWorld(opts) {
     haloGeo.attributes.position.needsUpdate = true;
   }
 
+  /* ---------- wishing lanterns: released by visitors, they rise into the stars ---------- */
+  const wishGeo = new THREE.CylinderGeometry(0.12, 0.155, 0.27, 14, 1, true);
+  const wishCap = new THREE.CylinderGeometry(0.05, 0.12, 0.05, 14);
+  const wishes = [];
+  function releaseLantern({ x, z, mine = false } = {}) {
+    if (x === undefined) {
+      if (mine) { x = player.pos.x - Math.sin(player.yaw) * 1.7; z = player.pos.z - Math.cos(player.yaw) * 1.7; }
+      else { x = (Math.random() - 0.5) * 8; z = player.pos.z - 4 - Math.random() * 14; }
+    }
+    const g = new THREE.Group();
+    const warm = new THREE.Color(1.0, 0.56, 0.24).multiplyScalar(mine ? 3.4 : 2.6);
+    const body = new THREE.Mesh(wishGeo, new THREE.MeshBasicMaterial({ color: warm, side: THREE.DoubleSide, transparent: true }));
+    const cap = new THREE.Mesh(wishCap, new THREE.MeshBasicMaterial({ color: 0x3a1c12, transparent: true }));
+    cap.position.y = 0.15;
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex.radial, color: new THREE.Color(1.0, 0.64, 0.32), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(1.3, 1.3, 1);
+    g.add(body, cap, glow);
+    g.position.set(x, 1.1, z);
+    scene.add(g);
+    wishes.push({ g, mats: [body.material, cap.material, glow.material], t: 0, x, z, ph: Math.random() * 6.28, rise: 0.42 + Math.random() * 0.16 });
+    // at most 40 in the sky: the oldest drift away first
+    while (wishes.length > 40) dropWish(0);
+  }
+  function dropWish(k) {
+    const w = wishes[k];
+    scene.remove(w.g);
+    w.mats.forEach((m) => m.dispose());
+    wishes.splice(k, 1);
+  }
+  animated.push((t, dt) => {
+    for (let k = wishes.length - 1; k >= 0; k--) {
+      const w = wishes[k];
+      w.t += dt;
+      const lift = Math.min(1, w.t / 2.5);
+      w.g.position.y = 1.1 + w.rise * w.t * lift;
+      w.g.position.x = w.x + Math.sin(w.t * 0.45 + w.ph) * 0.35 * lift;
+      w.g.position.z = w.z + Math.cos(w.t * 0.32 + w.ph) * 0.25 * lift;
+      w.g.rotation.y += dt * 0.3;
+      const fade = w.t > 70 ? Math.max(0, 1 - (w.t - 70) / 12) : 1;
+      w.mats[0].opacity = fade;
+      w.mats[1].opacity = fade;
+      w.mats[2].opacity = 0.6 * fade * (0.85 + Math.sin(t * 3 + w.ph) * 0.15);
+      if (fade <= 0) dropWish(k);
+    }
+  });
+
   /* ---------- only animate what is near, and sharpen covers as you approach ---------- */
   let wakeTick = 0;
   const captureWaiters = [];
@@ -2106,6 +2152,7 @@ export async function createWorld(opts) {
     setAuthorOnline(id, on) { booths.forEach((b) => { if (b.holo && b.holo.info.id === id) b.holo.setOnline(on); }); },
     setCustomBook,
     setScreens(data) { SIGNS.screens = data; drawScreens(); },
+    releaseLantern,
     capture: () => new Promise((res) => { captureWaiters.push(res); }),
     playerState: () => ({ x: +player.pos.x.toFixed(2), z: +player.pos.z.toFixed(2), yaw: +player.yaw.toFixed(2), seated: player.seated }),
     listener() {

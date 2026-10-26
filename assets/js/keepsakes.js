@@ -334,6 +334,73 @@ export function makeCertificate({ name, count, total, covers, logo, lines, date 
   return c;
 }
 
+/* ---------- the intention written on a wishing lantern ---------- */
+export function makeIntentionCard({ text, name, logo, lines }) {
+  const W = 1080, H = 1350;
+  const c = make(W, H);
+  const ctx = c.getContext('2d');
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#120a22');
+  sky.addColorStop(0.55, '#2a1438');
+  sky.addColorStop(1, '#4a2236');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+  // stars
+  for (let i = 0; i < 160; i++) {
+    const x = (Math.sin(i * 12.9898) * 43758.5453 % 1 + 1) % 1 * W, y = (Math.sin(i * 78.233) * 12543.21 % 1 + 1) % 1 * H * 0.7;
+    ctx.fillStyle = `rgba(255,244,226,${0.25 + (i % 7) / 12})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 1 + (i % 3) * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // the lantern, glowing
+  const lx = W / 2, ly = 330;
+  const halo = ctx.createRadialGradient(lx, ly, 10, lx, ly, 260);
+  halo.addColorStop(0, 'rgba(255,190,110,.75)');
+  halo.addColorStop(0.35, 'rgba(255,150,80,.25)');
+  halo.addColorStop(1, 'rgba(255,150,80,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, W, 700);
+  const body = ctx.createLinearGradient(lx - 70, 0, lx + 70, 0);
+  body.addColorStop(0, '#e07b32');
+  body.addColorStop(0.5, '#ffd08a');
+  body.addColorStop(1, '#e07b32');
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(lx - 62, ly - 95);
+  ctx.lineTo(lx + 62, ly - 95);
+  ctx.lineTo(lx + 82, ly + 95);
+  ctx.lineTo(lx - 82, ly + 95);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#5a2a14';
+  ctx.fillRect(lx - 66, ly - 104, 132, 12);
+  ctx.fillStyle = 'rgba(255,240,200,.95)';
+  ctx.beginPath();
+  ctx.ellipse(lx, ly + 95, 82, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = GOLD;
+  ctx.font = `700 26px ${SANS}`;
+  spaced(ctx, 'A WISHING LANTERN', W / 2, 560, 9);
+  const t = fit(ctx, `“${text}”`, { font: (s) => `italic 500 ${s}px ${SERIF}`, max: 78, min: 44, maxW: W * 0.78, maxLines: 5 });
+  ctx.fillStyle = '#fbf0dc';
+  const top = 680 + (5 - t.lines.length) * t.size * 0.5;
+  t.lines.forEach((l, i) => ctx.fillText(l, W / 2, top + i * t.size * 1.22));
+  ornament(ctx, W / 2, 1090, 420, GOLD);
+  if (name) {
+    ctx.fillStyle = GOLD_HI;
+    ctx.font = `500 40px ${SERIF}`;
+    ctx.fillText(name, W / 2, 1150);
+  }
+  logoDisc(ctx, logo, W / 2, 1222, 36);
+  ctx.fillStyle = GOLD;
+  ctx.font = `700 20px ${SANS}`;
+  spaced(ctx, lines.footer.toUpperCase(), W / 2, 1300, 5);
+  return c;
+}
+
 /* ---------- save or share an image ---------- */
 export function toBlob(canvas, type = 'image/jpeg', q = 0.92) {
   return new Promise((res) => canvas.toBlob(res, type, q));

@@ -91,24 +91,59 @@ function lcc_vbf_start_iso() {
 	return $dt ? $dt->format('c') : '';
 }
 
-/* "5:00 pm GMT | Chuck Barnard | Raising resilient teens", one talk per line. */
+/*
+ * The programme, one line per talk or break: "time | who | title | minutes", for example
+ *   5:00 pm | Chuck Barnard | Raising resilient teens | 20
+ *   5:20 pm | Break | Lanterns and a breathing minute
+ * Times are in the site's time zone unless the line names one (5:00 pm GMT). Minutes is optional:
+ * without it a talk lasts until the next line.
+ */
 function lcc_vbf_parse_schedule($raw, &$problems = null) {
 	$problems = array();
 	$out      = array();
+	$o        = lcc_vbf_options();
+	$day      = $o['start'] ? substr($o['start'], 0, 10) : lcc_vbf_data()['event']['date'];
 	foreach (preg_split('/\r\n|\r|\n/', (string) $raw) as $line) {
 		$line = trim($line);
 		if ($line === '') {
 			continue;
 		}
-		$parts = array_map('trim', explode('|', $line));
-		$id    = count($parts) >= 2 ? lcc_vbf_find_author($parts[1]) : '';
-		if (!$id || $parts[0] === '') {
+		$parts   = array_map('trim', explode('|', $line));
+		$at      = count($parts) >= 2 ? lcc_vbf_time_on($day, $parts[0]) : '';
+		$break   = isset($parts[1]) && preg_match('/^(break|pause|intermission)$/i', $parts[1]);
+		$id      = $break || !isset($parts[1]) ? '' : lcc_vbf_find_author($parts[1]);
+		$minutes = isset($parts[3]) && preg_match('/^(\d{1,3})/', $parts[3], $m) ? (int) $m[1] : 0;
+		if (!$at || (!$break && !$id)) {
 			$problems[] = $line;
 			continue;
 		}
-		$out[] = array('time' => $parts[0], 'author' => $id, 'title' => isset($parts[2]) ? $parts[2] : '');
+		$entry = array('at' => $at, 'time' => $parts[0], 'title' => isset($parts[2]) ? $parts[2] : '');
+		if ($break) {
+			$entry['break'] = true;
+		} else {
+			$entry['author'] = $id;
+		}
+		if ($minutes) {
+			$entry['minutes'] = $minutes;
+		}
+		$out[] = $entry;
 	}
 	return $out;
+}
+
+/* "5:00 pm", "17:00", "5pm" or "5:00 pm GMT" on the event's day, as an ISO 8601 time; '' if unreadable. */
+function lcc_vbf_time_on($day, $time) {
+	$time = preg_replace('/\b([ap])\.?m\.?/i', '$1m', trim((string) $time));
+	$time = preg_replace('/^(\d{1,2})\.(\d{2})/', '$1:$2', $time);
+	if (!$day || !preg_match('/^\d{1,2}(:\d{2})?\s*(am|pm)?(\s+[a-z][a-z\/_+\-0-9:]*)?$/i', $time)) {
+		return '';
+	}
+	try {
+		$dt = new DateTimeImmutable($day . ' ' . $time, wp_timezone());
+	} catch (Exception $e) {
+		return '';
+	}
+	return $dt->format('c');
 }
 
 function lcc_vbf_find_author($name) {

@@ -128,7 +128,8 @@ function lcc_vbf_config_script() {
 	$o      = lcc_vbf_options();
 	$data   = lcc_vbf_data();
 	$start  = lcc_vbf_start_iso();
-	$inbox  = array_keys(array_filter(lcc_vbf_inboxes()));
+	// the addresses "Send a message" writes to, base64 so simple address-harvesting bots pass them by
+	$inbox = array_map('base64_encode', array_filter(lcc_vbf_inboxes()));
 	$config = array(
 		'event'    => array(
 			'start'    => $start,
@@ -139,9 +140,8 @@ function lcc_vbf_config_script() {
 			'schedule' => lcc_vbf_parse_schedule($o['schedule']),
 		),
 		'guide'    => lcc_vbf_openai_key() ? rest_url('lcc-fair/v1/guide') : '',
-		'message'  => rest_url('lcc-fair/v1/message'),
-		'inboxes'  => $inbox,
-		'fallback' => is_email($o['fallback_inbox']) ? 1 : 0,
+		'inboxes'  => $inbox ? $inbox : new stdClass(),
+		'fallback' => is_email($o['fallback_inbox']) ? base64_encode($o['fallback_inbox']) : '',
 		'live'     => $o['live'] ? 1 : 0,
 		'ga'       => preg_match('/^G-[A-Z0-9]{4,20}$/', $o['ga']) ? 1 : 0,
 	);
@@ -162,10 +162,8 @@ function lcc_vbf_config_script() {
     window.FAIR_LIVE = window.FAIR_LIVE || {};
     window.FAIR_LIVE.enabled = !!o.live;
     window.FAIR_CONTACT = window.FAIR_CONTACT || {};
-    window.FAIR_CONTACT.via = 'site';
-    window.FAIR_CONTACT.endpoint = o.message;
-    window.FAIR_CONTACT.fallbackInbox = o.fallback ? 'site' : '';
-    (window.FAIR_AUTHORS || []).forEach(function (a) { a.inbox = o.inboxes.indexOf(a.id) >= 0 ? 'site' : ''; });
+    window.FAIR_CONTACT.fallbackInbox = o.fallback ? atob(o.fallback) : '';
+    (window.FAIR_AUTHORS || []).forEach(function (a) { a.inbox = o.inboxes[a.id] ? atob(o.inboxes[a.id]) : ''; });
     if (o.ga) window.FAIR_ANALYTICS = { enabled: true };
   })($json);
 </script>

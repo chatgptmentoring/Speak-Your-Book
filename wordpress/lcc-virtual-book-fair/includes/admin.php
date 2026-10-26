@@ -53,7 +53,7 @@ function lcc_vbf_sanitize($in) {
 	$schedule = sanitize_textarea_field($str('schedule'));
 	lcc_vbf_parse_schedule($schedule, $problems);
 	if ($problems) {
-		add_settings_error(LCC_VBF_OPTION, 'lcc_vbf_schedule', 'These schedule lines were skipped (write them as "time | author | title", with the author\'s name as it appears in the fair): ' . esc_html(implode(' / ', $problems)), 'warning');
+		add_settings_error(LCC_VBF_OPTION, 'lcc_vbf_schedule', 'These programme lines could not be read and are not shown (write them as "5:00 pm | Author name | Title", with the name as it appears in the fair, or "5:20 pm | Break"): ' . esc_html(implode(' / ', $problems)), 'warning');
 	}
 
 	// authors left out keep the address from the fair
@@ -108,7 +108,7 @@ function lcc_vbf_sanitize($in) {
 	);
 }
 
-/* ---------- one-click actions: create the page, send a test email ---------- */
+/* ---------- one-click action: create the page ---------- */
 
 add_action('admin_post_lcc_vbf_create_page', function () {
 	if (!current_user_can('manage_options')) {
@@ -131,21 +131,6 @@ add_action('admin_post_lcc_vbf_create_page', function () {
 	$o['page_id'] = $id;
 	update_option(LCC_VBF_OPTION, $o);
 	lcc_vbf_back('page_created');
-});
-
-add_action('admin_post_lcc_vbf_test_mail', function () {
-	if (!current_user_can('manage_options')) {
-		wp_die('Sorry, you are not allowed to do that.');
-	}
-	check_admin_referer('lcc_vbf_test_mail');
-	$me   = wp_get_current_user();
-	$sent = wp_mail(
-		$me->user_email,
-		'Test: a message from the Virtual Book Fair',
-		"This is how messages from visitors to the authors are sent from this site.\nIf you are reading this, they will arrive.",
-		array('Content-Type: text/plain; charset=UTF-8')
-	);
-	lcc_vbf_back($sent ? 'mail_sent' : 'mail_failed');
 });
 
 function lcc_vbf_back($notice) {
@@ -190,14 +175,12 @@ function lcc_vbf_settings_page() {
 	$notices  = array(
 		'page_created' => array('success', 'The fair\'s page is ready as a draft. Preview it, then publish it when you are happy.'),
 		'page_failed'  => array('error', 'The page could not be created. You can also add a page yourself and choose the template "Virtual Book Fair (full screen)".'),
-		'mail_sent'    => array('success', 'A test email is on its way to your inbox. If it does not arrive within a few minutes (check spam too), messages to authors will not arrive either: ask your host or set up an SMTP plugin.'),
-		'mail_failed'  => array('error', 'This site could not send email. Messages to authors need working email: ask your host or set up an SMTP plugin.'),
 	);
 	$notice   = isset($_GET['lcc-vbf']) ? sanitize_key($_GET['lcc-vbf']) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 	$tz       = wp_timezone_string();
 	$schedule_example = '';
 	foreach (array_slice(array_values($authors), 0, 2) as $i => $a) {
-		$schedule_example .= ($i ? "\n" : '') . (5 + $i) . ':00 pm GMT | ' . $a['name'] . ' | ' . (isset($a['books'][0]) ? $a['books'][0] : 'Talk title');
+		$schedule_example .= ($i ? "\n5:20 pm | Break | Lanterns and a breathing minute\n" : '') . ($i ? '5:30 pm' : '5:00 pm') . ' | ' . $a['name'] . ' | ' . (isset($a['books'][0]) ? $a['books'][0] : 'Talk title') . ($i ? '' : ' | 20');
 	}
 	?>
 	<div class="wrap lcc-vbf">
@@ -272,7 +255,7 @@ function lcc_vbf_settings_page() {
 						<th scope="row"><label for="lcc-vbf-schedule">Who speaks when</label></th>
 						<td>
 							<textarea id="lcc-vbf-schedule" class="large-text code" rows="5" name="<?php echo $name('schedule'); ?>" placeholder="<?php echo esc_attr($schedule_example); ?>"><?php echo esc_textarea($o['schedule']); ?></textarea>
-							<p class="description">One talk per line: <code>time | author | title</code>. The times show in the speaker list, and the guide can answer "when does … speak?".</p>
+							<p class="description">One line per talk or break: <code>time | author | title | minutes</code>, or <code>time | Break | title</code>. Times are in this site's time zone (<?php echo esc_html($tz); ?>) unless you add one, like <code>5:00 pm GMT</code>; minutes is optional (without it a talk lasts until the next line). Visitors see each time in their own time zone, can set reminders 30, 10 and 5 minutes before a talk, and between the talks the fair suggests things to do.</p>
 						</td>
 					</tr>
 				</table>
@@ -317,8 +300,7 @@ function lcc_vbf_settings_page() {
 
 			<div class="card">
 				<h2>4. Messages to authors</h2>
-				<p>Each author's panel has a <em>Send a message</em> button. The message is emailed from this site and the author simply replies to the visitor. The addresses stay on this site and never appear in the page. Leave an address empty to hide the button for that author.</p>
-				<p><a class="button" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=lcc_vbf_test_mail'), 'lcc_vbf_test_mail')); ?>">Send me a test email</a> <span class="description">Checks that this site can send email.</span></p>
+				<p>Each author's panel has a <em>Send a message</em> button. It opens a new email in Gmail (or the visitor's own email app), addressed to the author and already begun; the visitor sends it from their own email and the author simply replies. Visitors see the address they write to. Leave an address empty to hide the button for that author.</p>
 				<table class="lcc-vbf-inboxes" role="presentation">
 					<?php foreach ($authors as $id => $a) : ?>
 						<tr>

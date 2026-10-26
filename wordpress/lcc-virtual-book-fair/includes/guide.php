@@ -42,7 +42,11 @@ Respond with a JSON object: {"reply": "<markdown>", "actions": [ ... ]} with at 
 {"type":"creator"}   lets the visitor design a cover for their own book
 {"type":"tour"}   starts the guided tour
 {"type":"watch"}   opens the live stream (only if event.streamInTheFair is true)
-When the visitor wants to go somewhere or see a booth, include a goto action.
+{"type":"remind","id":"<author id>"}   sets reminders 30, 10 and 5 minutes before that author's talk (only if their schedule entry has canRemind true)
+{"type":"breathe"}   a guided breathing minute with the four pillars
+{"type":"lantern"}   lets the visitor write an intention on a wishing lantern and release it over the fair
+{"type":"quiz"}   the Book Oracle: three questions that point to the right book
+When the visitor wants to go somewhere or see a booth, include a goto action. Times in the schedule are already in the visitor's own time zone.
 PROMPT;
 }
 
