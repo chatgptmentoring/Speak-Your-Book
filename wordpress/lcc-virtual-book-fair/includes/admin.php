@@ -105,6 +105,7 @@ function lcc_vbf_sanitize($in) {
 		'zoom'           => $url('zoom', 'The Zoom link'),
 		'schedule'       => $schedule,
 		'live'           => empty($in['live']) ? 0 : 1,
+		'show_count'     => empty($in['show_count']) ? 0 : 1,
 		'ga'             => $ga,
 		'openai_key'     => sanitize_text_field($key),
 		'model'          => sanitize_text_field($str('model') !== '' ? $str('model') : 'gpt-4o-mini'),
@@ -326,7 +327,8 @@ function lcc_vbf_settings_page() {
 				<table class="form-table" role="presentation">
 					<tr>
 						<th scope="row">Live presence</th>
-						<td><label><input type="checkbox" name="<?php echo $name('live'); ?>" value="1" <?php checked($o['live']); ?>> Visitors see each other in the fair, wave and send reactions</label><p class="description">Only a first name, a colour and a position are shared, through a public relay; nothing is stored. Authors appear in gold through their private links.</p></td>
+						<td><label><input type="checkbox" name="<?php echo $name('live'); ?>" value="1" <?php checked($o['live']); ?>> Visitors see each other in the fair, wave and send reactions</label><p class="description">Only a first name, a colour and a position are shared, through a public relay; nothing is stored. Authors appear in gold through their private links.</p>
+							<label><input type="checkbox" name="<?php echo $name('show_count'); ?>" value="1" <?php checked($o['show_count']); ?>> Show how many people are in the fair (the <em>here now</em> counter in the top bar)</label></td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="lcc-vbf-ga">Google Analytics</label></th>

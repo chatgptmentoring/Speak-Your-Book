@@ -4,9 +4,9 @@
  */
 import * as THREE from 'three';
 
-const SERIF = '"Cormorant Garamond", Georgia, "Times New Roman", serif';
-const SANS = 'Manrope, "Helvetica Neue", Arial, sans-serif';
-const GOLD = '#e2bd78';
+export const SERIF = '"Cormorant Garamond", Georgia, "Times New Roman", serif';
+export const SANS = 'Manrope, "Helvetica Neue", Arial, sans-serif';
+export const GOLD = '#e2bd78';
 const GOLD_HI = '#f7e1b0';
 
 let maxAniso = 8;
@@ -45,7 +45,7 @@ export async function loadFonts() {
 }
 
 /* ---------- text helpers ---------- */
-function spaced(ctx, text, x, y, spacing, align = 'center') {
+export function spaced(ctx, text, x, y, spacing, align = 'center') {
   const chars = [...text];
   const widths = chars.map((c) => ctx.measureText(c).width);
   const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
@@ -57,7 +57,7 @@ function spaced(ctx, text, x, y, spacing, align = 'center') {
   return total;
 }
 
-function wrap(ctx, text, maxW) {
+export function wrap(ctx, text, maxW) {
   const words = String(text).split(/\s+/);
   const lines = [];
   let line = '';
@@ -69,7 +69,7 @@ function wrap(ctx, text, maxW) {
   return lines;
 }
 
-function fit(ctx, text, { family, weight = 600, style = '', max, min, maxW, maxLines }) {
+export function fit(ctx, text, { family, weight = 600, style = '', max, min, maxW, maxLines }) {
   for (let s = max; s >= min; s -= 2) {
     ctx.font = `${style} ${weight} ${s}px ${family}`;
     const lines = wrap(ctx, text, maxW);
@@ -79,7 +79,7 @@ function fit(ctx, text, { family, weight = 600, style = '', max, min, maxW, maxL
   return { size: min, lines: wrap(ctx, text, maxW).slice(0, maxLines) };
 }
 
-function goldGradient(ctx, x0, y0, x1, y1) {
+export function goldGradient(ctx, x0, y0, x1, y1) {
   const g = ctx.createLinearGradient(x0, y0, x1, y1);
   g.addColorStop(0, GOLD_HI);
   g.addColorStop(0.5, GOLD);
@@ -87,7 +87,7 @@ function goldGradient(ctx, x0, y0, x1, y1) {
   return g;
 }
 
-function ornament(ctx, x, y, w, color = GOLD) {
+export function ornament(ctx, x, y, w, color = GOLD) {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
@@ -494,7 +494,7 @@ export function posterTexture(img, book, index, total, width = 640) {
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = GOLD;
   ctx.font = `700 ${Math.round(W * 0.027)}px ${SANS}`;
-  spaced(ctx, `BOOTH ${String(index + 1).padStart(2, '0')}  ·  OF ${String(total).padStart(2, '0')}`, W / 2, H * 0.1, W * 0.01);
+  spaced(ctx, index < 0 ? 'FROM LIFE COACH CODE' : `BOOTH ${String(index + 1).padStart(2, '0')}  ·  OF ${String(total).padStart(2, '0')}`, W / 2, H * 0.1, W * 0.01);
 
   const t = fit(ctx, book.title, { family: SERIF, weight: 600, max: Math.round(W * 0.115), min: Math.round(W * 0.06), maxW: W * 0.8, maxLines: 3 });
   ctx.fillStyle = '#fbf3e4';

@@ -401,6 +401,76 @@ export function makeIntentionCard({ text, name, logo, lines }) {
   return c;
 }
 
+/* ---------- a fortune from the Garden: the slip of paper out of the cookie ---------- */
+export function makeFortuneCard({ text, name, logo, lines }) {
+  const W = 1080, H = 1350;
+  const c = make(W, H);
+  const ctx = c.getContext('2d');
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0d1d16');
+  bg.addColorStop(0.6, '#173326');
+  bg.addColorStop(1, '#24152e');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 140; i++) {
+    ctx.fillStyle = ['rgba(247,182,210,.7)', 'rgba(255,244,226,.6)', 'rgba(247,225,176,.6)'][i % 3];
+    ctx.beginPath();
+    ctx.arc((i * 997) % W, (i * 613) % H, 2 + (i % 4), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // the two halves of the cookie, and the slip between them
+  const cy = 360;
+  ctx.fillStyle = '#e8b25c';
+  [-1, 1].forEach((sd) => {
+    ctx.save();
+    ctx.translate(W / 2 + sd * 190, cy);
+    ctx.rotate(sd * 0.35);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 150, 92, 0, Math.PI, 0, false);
+    ctx.quadraticCurveTo(0, 40, -150, 0);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(120,64,20,.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, -10, 90, 40, 0, Math.PI, 0, false);
+    ctx.fill();
+    ctx.fillStyle = '#e8b25c';
+    ctx.restore();
+  });
+  ctx.save();
+  ctx.translate(W / 2, 640);
+  ctx.rotate(-0.03);
+  ctx.fillStyle = '#fff8ea';
+  ctx.shadowColor = 'rgba(0,0,0,.35)';
+  ctx.shadowBlur = 30;
+  ctx.fillRect(-430, -170, 860, 340);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#b3283c';
+  ctx.fillRect(-430, -170, 860, 10);
+  ctx.fillRect(-430, 160, 860, 10);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  const t = fit(ctx, text, { font: (s) => `italic 500 ${s}px ${SERIF}`, max: 58, min: 34, maxW: 760, maxLines: 4 });
+  ctx.fillStyle = '#3a1d16';
+  const top = -((t.lines.length - 1) * t.size * 1.2) / 2 + t.size * 0.35;
+  t.lines.forEach((l, i) => ctx.fillText(l, 0, top + i * t.size * 1.2));
+  ctx.restore();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = GOLD;
+  ctx.font = `700 26px ${SANS}`;
+  spaced(ctx, 'A FORTUNE FROM THE GARDEN', W / 2, 920, 9);
+  ornament(ctx, W / 2, 1000, 420, GOLD);
+  if (name) {
+    ctx.fillStyle = GOLD_HI;
+    ctx.font = `500 40px ${SERIF}`;
+    ctx.fillText(`for ${name}`, W / 2, 1080);
+  }
+  logoDisc(ctx, logo, W / 2, 1180, 36);
+  ctx.fillStyle = GOLD;
+  ctx.font = `700 20px ${SANS}`;
+  spaced(ctx, lines.footer.toUpperCase(), W / 2, 1270, 5);
+  return c;
+}
+
 /* ---------- save or share an image ---------- */
 export function toBlob(canvas, type = 'image/jpeg', q = 0.92) {
   return new Promise((res) => canvas.toBlob(res, type, q));

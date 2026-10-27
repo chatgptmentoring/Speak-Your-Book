@@ -14,9 +14,26 @@ Coach Code.
 - **The entrance**: the Life Coach Code crest crowns the arch, with a gold medallion, laurels, a
   turning ring of text, a sunburst and searchlights. The logo is also inlaid in the plaza floor and
   flies on flags from the lamp posts. Two easels carry the poster for the live event.
-- **A candlelit hall of 16 booths** (9 published books and 7 coming soon). Each booth has a poster,
-  the book on a pedestal, and a hand-made piece that carries the spirit of the book. *Food Isn't
-  the Problem* has its 3-Step Path: Name it, Claim it, Reframe it.
+- **A candlelit hall of 14 booths and 16 books**. Each book has a poster, a pedestal, and a
+  hand-made piece that carries the spirit of the book. An author with several books has one booth
+  for all of them (`booth` in `books.js`): Chuck Barnard's three books stand side by side under his
+  name, with their three pieces between them. *Food Isn't the Problem* has its 3-Step Path: Name
+  it, Claim it, Reframe it.
+- **Two paths off the hall**, just past the entrance, each over a bridge to a floating island:
+  - **The Garden** (left): a place to hang out between the talks, round a tree in blossom with
+    benches to sit on together. Everything happens by walking up to it and pressing `E` (or
+    tapping it): a free drink at **the Elixir Bar**, a **fortune cookie** with a message (kept as
+    a card if you like), the **lantern pier** to write an intention and let a lantern rise, the
+    **meditation circle** for a breathing minute, and a stone that asks seven questions:
+    **Should you write a book?** When the signs say yes, it offers a free call with Life Coach Code.
+  - **Life Coach Code** (right): all twelve solutions for coaches stand in an arc (press `E` at
+    any of them for the problem it solves, what it includes and a free call), with **the Life
+    Coach Code guide** at the centre to find where to start, **three ways to join as a coach**
+    (get interviewed, publish your articles, a free coach account, with a search through the
+    articles coaches have published), words from coaches, a board to **book a free call**, and
+    **Life Coach Code's own booth** with Dejan Dachevski's two books.
+- **A free call, inside the fair**: every *Create your book with us*, *Book a free call* and
+  *Schedule a call* button opens the Calendly booking page in a window (`FAIR_LINKS.discovery`).
 - **Meet the authors**: beside every booth the author's portrait rises from a beam of light in
   a gold ring, under their name. Press `E` to meet them: their books, their credentials, and an
   invitation to hear them live on 1 November.
@@ -36,13 +53,12 @@ Coach Code.
   before a talk and when it starts (with a sound, and a browser notification if allowed), and
   offers a calendar file with the same three reminders for their phone.
 - **Between the talks**: the top bar and the stage screens show who is speaking now, or who is
-  next and in how many minutes. When a break starts, a card offers three things to do meanwhile:
-  - **Breathe**: a guided breathing minute (or three) with the four pillars, Spirit, Mind, Body
-    and Heart, with an optional voice. Also from the temple.
-  - **Wishing lantern**: write an intention and release it; it rises over the fair, and everyone
-    there at that moment sees it float up. The words stay private, and can be kept as a card.
-  - **The Book Oracle**: three questions (what the heart asks for, who the book is for, how they
-    like to read) and the Oracle turns over the right book, with two more suggestions.
+  next and in how many minutes. When a break starts, a card offers to walk to the Garden's bar,
+  fortune cookies, lantern pier or meditation circle. The activities are not in the menu: they
+  happen where they stand. In the hall, **the Book Oracle** asks three questions and turns over
+  the right book.
+- **The book cards**: in a book's panel, the cards slide with small arrows beside the dots (or a
+  swipe on phones).
 - **Guided tour** with captions and optional spoken narration, **photo mode** with a Life Coach
   Code frame, a **Fair Passport** with a certificate for touring every booth, generative **music**
   with a spatial soundscape per booth, and a **map**.
@@ -53,14 +69,14 @@ Coach Code.
 | --- | --- |
 | `W` `S` (or ↑ ↓) to walk, `A` `D` (or ← →) to turn, `Shift` to run | Thumb joystick (bottom left) |
 | Drag to look around | Drag anywhere to look around |
-| `E` to interact with what you're facing (books, authors, seats, people) | The `E` button (bottom right) |
+| `E` to interact with what you're facing (books, authors, seats, people, the Garden, the solutions) | The `E` button (bottom right) |
 | Click any book to open it, click an open book to turn its pages | Tap any book to open it |
 | `M` map, `P` photo, `T` guided tour, `1` to `5` reactions, `Esc` to leave a booth | The `⋯` menu in the top bar |
-| *Between the talks* (breathe, lantern, Oracle) in the `⋯` menu | The same |
 
 On phones the fair opens clean: no cards, logo or buttons over the view, just the 3D hall, the
 thumb joystick and the `E` button when something can be opened. Everything else (make your
-book, the live event, between the talks, the guide, the map, the passport, the discovery call) is
+book, the live event, the guide, the map with the Garden and Life Coach Code, the passport, the
+free call) is
 in the `⋯` menu, which also shows who is speaking now or next. A card appears only when the
 visitor asks for one (`E` at the Oracle, the stage or the temple, or the Oracle from the menu),
 with a close button. *Register free* sits at the top of the `⋯` menu.
@@ -230,6 +246,15 @@ cool. The `⋯` menu has **Visual quality**:
 
 The choice is remembered on the device. On phones the glow is softer so book covers stay
 readable, and highlights are capped so nothing flares or flickers.
+
+Built to stay light: the small parts of a booth (the book, the plate, the light cone) are only
+drawn within about 24 metres, the colonnade is a handful of merged meshes, and the two islands
+use unlit, painted materials, merged and instanced meshes and no extra lights; each island is
+drawn only when you are within sight of it and animated only when you are close.
+
+To hide the *here now* counter in the top bar, set `FAIR_LIVE.showCount = false` in `books.js`,
+or untick it in **Settings → Virtual Book Fair → Visitors** on WordPress. Visitors still see and
+greet each other.
 
 ## Messages to authors
 

@@ -40,6 +40,7 @@ function lcc_vbf_defaults() {
 		'zoom'           => '',
 		'schedule'       => '',
 		'live'           => 1,
+		'show_count'     => 1, // the "here now" counter in the top bar
 		'ga'             => '',
 		'openai_key'     => '',
 		'model'          => 'gpt-4o-mini',

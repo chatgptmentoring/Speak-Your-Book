@@ -70,6 +70,7 @@ window.FAIR_BOOKS = [
     title: 'Teen Mental Health',
     subtitle: 'What Every Parent Needs to Know to Build a Resilient Teen',
     author: 'Chuck Barnard',
+    booth: 'chuck-barnard', // his three books share one booth
     credentials: '',
     tags: ['Parenting', 'Teens', 'Mental health'],
     aisles: ['family', 'mind'],
@@ -88,6 +89,57 @@ window.FAIR_BOOKS = [
     cover: { w: 1253, h: 2000 },
     colors: { spine: '#06080a', spineText: '#8fd0f0', glow: '#e9a240' },
     oracle: 'The strongest thing you can give a young heart is the feeling of being understood.'
+  },
+  {
+    slug: 'more-than-a-game',
+    title: 'More Than a Game',
+    subtitle: 'Raising a Resilient Athlete Without Sacrificing Their Childhood',
+    author: 'Chuck Barnard',
+    booth: 'chuck-barnard', // his three books share one booth
+    displayAuthor: 'Coach Chuck Barnard',
+    credentials: '',
+    tags: ['Parenting', 'Youth sports', 'Resilience'],
+    aisles: ['family'],
+    hook: 'Raise the athlete. Protect the child.',
+    description: [
+      'Youth sport can build extraordinary young people, or quietly wear them down. Coach Chuck Barnard draws on three decades as an educator, mentor and coach to help parents raise athletes who are resilient, without sacrificing the childhood that matters most.',
+      'Guided by a compass of character, resilience, effort and joy, More Than a Game is for the parent in the stands who wants their child to win at sport and at life.'
+    ],
+    inside: [
+      'The compass: character, resilience, effort and joy',
+      'Supporting performance without stealing the fun',
+      'Raising a strong athlete and a whole human'
+    ],
+    forWho: 'Sports parents, youth coaches and anyone who loves a young athlete.',
+    amazon: { url: 'https://www.amazon.com/More-Than-Game-Resilient-Sacrificing-ebook/dp/B0FQKNVD3L', store: 'Amazon.com', asin: 'B0FQKNVD3L' },
+    cover: { w: 1253, h: 2000 },
+    colors: { spine: '#15191c', spineText: '#e9e3d2', glow: '#b8913f' },
+    oracle: 'Let them play for love first. Champions are grown from joy, not pressure.'
+  },
+  {
+    slug: 'prince-and-the-prodigal',
+    title: 'Prince and the Prodigal',
+    subtitle: 'An Unlikely Friendship. A World-Changing Destiny.',
+    author: 'Chuck Barnard',
+    booth: 'chuck-barnard', // his three books share one booth
+    credentials: '',
+    tags: ['Fiction', 'Friendship', 'Destiny'],
+    aisles: ['stories'],
+    hook: 'Two lives. One horizon. A friendship that could change the world.',
+    description: [
+      'An unlikely friendship. A world-changing destiny. In this novel, Chuck Barnard turns from guidance to storytelling.',
+      'Prince and the Prodigal follows two very different lives drawn together by a bond neither expected, and toward a destiny far bigger than either of them.'
+    ],
+    inside: [
+      'An unlikely friendship',
+      'A destiny bigger than both of them',
+      'Storytelling from a coach’s heart'
+    ],
+    forWho: 'Readers who love stories of friendship, purpose and destiny.',
+    amazon: { url: 'https://www.amazon.com/Honoring-Horatio-Simon-Potter-ebook/dp/B00G13B57W/', store: 'Amazon.com', asin: 'B00G13B57W' },
+    cover: { w: 1024, h: 1536 },
+    colors: { spine: '#1f3f45', spineText: '#f3e6c0', glow: '#e6a53a' },
+    oracle: 'The right companion can turn any road into a destiny. Look who is walking beside you.'
   },
   {
     slug: 'the-invisible-midlife-woman',
@@ -138,31 +190,6 @@ window.FAIR_BOOKS = [
     oracle: 'The mind has doors the body remembers. Breathe slowly, and let them open.'
   },
   {
-    slug: 'more-than-a-game',
-    title: 'More Than a Game',
-    subtitle: 'Raising a Resilient Athlete Without Sacrificing Their Childhood',
-    author: 'Chuck Barnard',
-    displayAuthor: 'Coach Chuck Barnard',
-    credentials: '',
-    tags: ['Parenting', 'Youth sports', 'Resilience'],
-    aisles: ['family'],
-    hook: 'Raise the athlete. Protect the child.',
-    description: [
-      'Youth sport can build extraordinary young people, or quietly wear them down. Coach Chuck Barnard draws on three decades as an educator, mentor and coach to help parents raise athletes who are resilient, without sacrificing the childhood that matters most.',
-      'Guided by a compass of character, resilience, effort and joy, More Than a Game is for the parent in the stands who wants their child to win at sport and at life.'
-    ],
-    inside: [
-      'The compass: character, resilience, effort and joy',
-      'Supporting performance without stealing the fun',
-      'Raising a strong athlete and a whole human'
-    ],
-    forWho: 'Sports parents, youth coaches and anyone who loves a young athlete.',
-    amazon: { url: 'https://www.amazon.com/More-Than-Game-Resilient-Sacrificing-ebook/dp/B0FQKNVD3L', store: 'Amazon.com', asin: 'B0FQKNVD3L' },
-    cover: { w: 1253, h: 2000 },
-    colors: { spine: '#15191c', spineText: '#e9e3d2', glow: '#b8913f' },
-    oracle: 'Let them play for love first. Champions are grown from joy, not pressure.'
-  },
-  {
     slug: 'food-isnt-the-problem',
     title: 'Food Isn’t the Problem',
     subtitle: 'Understanding Emotional Eating and Crossing the Bridge to Peace with Food',
@@ -193,30 +220,6 @@ window.FAIR_BOOKS = [
     cover: { w: 1253, h: 2000 },
     colors: { spine: '#1b3a57', spineText: '#f39a4c', glow: '#2f86c9' },
     oracle: 'Name it. Claim it. Reframe it. Your hunger is a messenger, and you are ready to listen.'
-  },
-  {
-    slug: 'prince-and-the-prodigal',
-    title: 'Prince and the Prodigal',
-    subtitle: 'An Unlikely Friendship. A World-Changing Destiny.',
-    author: 'Chuck Barnard',
-    credentials: '',
-    tags: ['Fiction', 'Friendship', 'Destiny'],
-    aisles: ['stories'],
-    hook: 'Two lives. One horizon. A friendship that could change the world.',
-    description: [
-      'An unlikely friendship. A world-changing destiny. In this novel, Chuck Barnard turns from guidance to storytelling.',
-      'Prince and the Prodigal follows two very different lives drawn together by a bond neither expected, and toward a destiny far bigger than either of them.'
-    ],
-    inside: [
-      'An unlikely friendship',
-      'A destiny bigger than both of them',
-      'Storytelling from a coach’s heart'
-    ],
-    forWho: 'Readers who love stories of friendship, purpose and destiny.',
-    amazon: { url: 'https://www.amazon.com/Honoring-Horatio-Simon-Potter-ebook/dp/B00G13B57W/', store: 'Amazon.com', asin: 'B00G13B57W' },
-    cover: { w: 1024, h: 1536 },
-    colors: { spine: '#1f3f45', spineText: '#f3e6c0', glow: '#e6a53a' },
-    oracle: 'The right companion can turn any road into a destiny. Look who is walking beside you.'
   },
   {
     slug: 'journey-to-empowerment',
@@ -423,6 +426,61 @@ window.FAIR_BOOKS = [
     cover: { w: 1024, h: 1536 },
     colors: { spine: '#1c2c4a', spineText: '#f3e2bd', glow: '#f0a050' },
     oracle: 'The pain you carry can become a staircase. Take the first step.'
+  },
+
+  /* ---------- From Life Coach Code: these stand at its booth, down the right-hand path ----------
+     sponsored: true keeps them out of the hall, the passport and the speakers.
+     The covers are designed placeholders: replace assets/img/covers/<slug>-480/-800/-full.webp
+     with the real ones, and check the titles and subtitles against Amazon. */
+  {
+    slug: 'dangerous-secrets',
+    sponsored: true,
+    title: 'Dangerous Secrets',
+    subtitle: 'Writing articles that reach millions',
+    author: 'Dejan Dachevski',
+    credentials: '',
+    tags: ['For coaches', 'Viral content', 'Writing'],
+    aisles: [],
+    hook: 'Your message deserves millions of readers. Here is how to write it so it travels.',
+    description: [
+      'Dejan Dachevski has spent more than fourteen years helping coaches reach millions of readers with Life Coach Code. Dangerous Secrets opens his playbook.',
+      'It shows coaches how to write content that people stop for, finish and share: the hooks, the structure and the habits behind articles that spread.'
+    ],
+    inside: [
+      'What makes people stop, read and share',
+      'Hooks, structure and headlines that travel',
+      'Turning readers into clients'
+    ],
+    forWho: 'Coaches who pour their heart into content and want it to finally be seen.',
+    amazon: { url: 'https://www.amazon.com/Dangerous-Secrets-Articles-Millions-Unstoppable-ebook/dp/B08YDGKSHG', store: 'Amazon.com', asin: 'B08YDGKSHG' },
+    cover: { w: 1200, h: 1800 },
+    colors: { spine: '#1a0b0e', spineText: '#ff6a3d', glow: '#ff5a36' },
+    oracle: 'The story you keep to yourself could be the one that reaches millions.'
+  },
+  {
+    slug: 'master-ai',
+    sponsored: true,
+    title: 'Master AI',
+    subtitle: 'A coach’s guide to working with artificial intelligence',
+    author: 'Dejan Dachevski',
+    credentials: '',
+    tags: ['For coaches', 'AI', 'Business'],
+    aisles: [],
+    hook: 'AI will not replace a great coach. A coach who masters it will grow faster than ever.',
+    description: [
+      'From the team behind Life Coach Code’s AI tools, a practical guide for coaches who want AI working for them: in their writing, their marketing and their practice.',
+      'Clear, hands-on and written for coaches rather than engineers.'
+    ],
+    inside: [
+      'AI as your writing and marketing partner',
+      'Prompts and workflows for coaches',
+      'Staying human while working smarter'
+    ],
+    forWho: 'Coaches who want to use AI with confidence, without losing their own voice.',
+    amazon: { url: 'https://www.amazon.com/dp/B0BX4QFVG3', store: 'Amazon.com', asin: 'B0BX4QFVG3' },
+    cover: { w: 1200, h: 1800 },
+    colors: { spine: '#071a2c', spineText: '#5fe0ff', glow: '#3fb8ff' },
+    oracle: 'Let the machine carry the busywork, so your heart can carry the session.'
   }
 ];
 
@@ -487,9 +545,188 @@ window.FAIR_STORES = [
 ];
 
 window.FAIR_LINKS = {
-  discovery: 'https://forms.gle/d2YU7q9SEHPW9bZP8',
+  // the free call with Life Coach Code (Calendly); every "Create your book with us" and "Book a free
+  // call" button opens it in a window inside the fair
+  discovery: 'https://calendly.com/lifecoachcode/life-coach-code-authorship',
+  discoveryEmbed: 'https://calendly.com/lifecoachcode/life-coach-code-authorship?hide_event_type_details=1&hide_gdpr_banner=1',
   speakYourBook: 'https://www.lifecoachcode.com/speak-your-book',
   solutions: 'https://www.lifecoachcode.com/solutions'
+};
+
+/* =========================================================================
+   Life Coach Code, down the right-hand path: its twelve solutions for coaches, three ways to
+   join as a coach, words from coaches, and its own booth (the sponsored books above).
+   Every solution leads to the same first step: a free call (FAIR_LINKS.discovery).
+   ========================================================================= */
+window.FAIR_LCC = {
+  headline: 'Everything your coaching needs to become unmissable.',
+  intro: 'Books. Websites. AI. Marketing. Certification. The platform to be seen. Twelve done-for-you solutions, built by a team that has spent 14+ years helping coaches reach millions.',
+  partner: 'The partner behind the coach. We help you publish, get found, get seen and grow, so you can focus on changing lives.',
+  stats: [['14+', 'years in the field'], ['12', 'done-for-you solutions'], ['500+', 'coaches served'], ['100M+', 'views generated']],
+  solutionsUrl: 'https://www.lifecoachcode.com/solutions',
+  solutions: [
+    { id: 'authority', area: 'Authority', flagship: true, icon: 'book', title: 'Become a published author in 30–90 days.',
+      problem: 'You know you have a book in you, but the blank page, the lost years and the fear of “who am I to write this?” keep it trapped inside your head.',
+      body: 'Nothing builds authority faster than a book with your name on the spine. Through our Speak Your Book method we turn your message, spoken, not typed, into a professionally written, designed and published book. No blank page. No wasted years. Just your wisdom in readers’ hands.',
+      imagine: 'Picture handing a client your own book on the first call, and watching the way they look at you change.',
+      features: ['Speak Your Book method', 'Pro editing & design', 'Published in 30–90 days', 'Authority for life'],
+      cta: 'Book an authorship call', more: { label: 'Discover Speak Your Book', url: 'https://www.lifecoachcode.com/speak-your-book' } },
+    { id: 'foundation', area: 'Foundation', icon: 'web', title: 'A professional website that works as hard as you do.',
+      problem: 'Right now your website might be quietly costing you clients: visitors land, feel unsure, and leave without ever reaching out.',
+      body: 'Your site is your first impression, your storefront and your closer. We design and build fast, beautiful, conversion-focused websites, or upgrade the one you already have, so visitors turn into clients instead of bouncing away.',
+      imagine: 'Imagine waking up to enquiries from people who already feel like they know you, before you’ve said a word.',
+      features: ['Custom design', 'Built to convert', 'Fast & modern', 'Upgrades welcome'], cta: 'Map my website fix' },
+    { id: 'automation', area: 'Automation', icon: 'chat', title: 'Your 24/7 receptionist, trained on you.',
+      problem: 'Every visitor who lands on your site with a question and no one to ask is a client you’ll never know you lost.',
+      body: 'A website with no guide is a store with no one inside. Our AI Chat is your tireless front desk: trained on your voice, knowledge and offers. It gently guides every visitor and captures the 20–37% who would otherwise look around and leave. It never sleeps and costs a fraction of an employee.',
+      imagine: 'Imagine your calendar filling overnight while you sleep, every good-fit visitor warmly walked to the right next step.',
+      features: ['Trained on your voice', 'Captures 20–37% more', 'Works 24/7', 'Costs less than staff'], cta: 'Get my 24/7 receptionist' },
+    { id: 'experience', area: 'Experience', icon: 'app', title: 'An app built around how you coach.',
+      problem: 'Between sessions your clients drift: motivation fades, and the breakthroughs you worked so hard for quietly slip away.',
+      body: 'A learning platform, a quiz, a coaching companion, a membership, a guide to your method: whatever deepens the work. We design custom apps that turn your coaching into something clients carry in their pocket every single day.',
+      imagine: 'Imagine your method living in your clients’ hands daily, keeping them engaged, transformed and renewing without being asked.',
+      features: ['LMS & courses', 'Membership platforms', 'Client companions', 'Quizzes & guides'], cta: 'Design my app idea' },
+    { id: 'systems', area: 'Systems', icon: 'tools', title: 'The tools that let you coach at your best.',
+      problem: 'You’re spending your best hours on intake forms, scheduling and admin: the very things that pull you away from coaching.',
+      body: 'Custom software built for how coaches actually work: intake quizzes that pre-qualify leads, assessment tools, progress trackers, onboarding flows, client dashboards, calculators. If a tool would make your practice sharper, we build it, so the tech serves you, not the other way around.',
+      imagine: 'Imagine the busywork simply handling itself, and you arriving at every session fully present, fully you.',
+      features: ['Assessment quizzes', 'Client dashboards', 'Onboarding flows', 'Progress trackers'], cta: 'Build my toolkit' },
+    { id: 'growth', area: 'Growth', icon: 'search', title: 'Get found by the people already searching.',
+      problem: 'Right now, the people who need exactly what you offer are searching for it, and finding someone else.',
+      body: 'We run a complete SEO analysis of your site, then build and execute the plan: technical fixes, speed, unblocking bottlenecks, content calendars and a marketing strategy that compounds month after month. Stop relying on luck: become the answer search engines recommend.',
+      imagine: 'Imagine a steady stream of ready-to-work clients finding you first, month after month, without spending a cent on ads.',
+      features: ['Full SEO audit', 'Plan + execution', 'Speed & performance', 'Content calendars'], cta: 'Get found first' },
+    { id: 'reach', area: 'Reach', icon: 'heart', title: 'Content that actually gets seen.',
+      problem: 'You pour your heart into posts that vanish into the void: a handful of likes, no clients, and the quiet ache of feeling invisible.',
+      body: 'We manage your Facebook page and group, LinkedIn, newsletters and Instagram, and make sure what goes out truly engages. We’ve spent 14+ years and reached millions of views learning what works. Now we put it to work for you.',
+      imagine: 'Imagine your message reaching the thousands it was meant for, and your inbox filling with “I’ve been following you, can we talk?”',
+      features: ['Facebook & Groups', 'Instagram', 'LinkedIn', 'Newsletters'], cta: 'Get my content seen' },
+    { id: 'visibility', area: 'Visibility', icon: 'video', title: 'Scroll-stopping video, professionally edited.',
+      problem: 'You film something real and vulnerable, and people scroll right past it in the first two seconds.',
+      body: 'YouTube videos and Reels edited to hold attention from the very first frame: hooks, pacing, captions and polish that turn passing viewers into loyal followers, and followers into paying clients.',
+      imagine: 'Imagine a stranger watching to the end, feeling you get them, and clicking “book a call” before the video even finishes.',
+      features: ['YouTube', 'Reels & Shorts', 'Hooks & captions', 'Pro pacing'], cta: 'Stop the scroll' },
+    { id: 'clients', area: 'Clients', icon: 'funnel', title: 'A steady stream of clients, on autopilot.',
+      problem: 'The feast-or-famine cycle is exhausting: one month you’re full, the next you’re anxiously wondering where the next client comes from.',
+      body: 'We build the systems that bring you new clients consistently, and automate the busywork that eats your day: more qualified leads, far less admin, and all the time in the world to focus on what you do best, coaching.',
+      imagine: 'Imagine opening your calendar to a predictable flow of qualified calls, and finally feeling safe enough to grow.',
+      features: ['Lead generation', 'Workflow automation', 'Smart follow-up', 'Hours back each week'], cta: 'Fill my calendar' },
+    { id: 'credentials', area: 'Credentials', icon: 'award', title: 'Get certified by the mother of coaching herself.',
+      problem: 'You’re great at what you do, but without a credential clients recognise, you keep getting talked down on price and passed over for the “certified” coach.',
+      body: 'Train through ICF-accredited programs led by Dr. Cherie Carter-Scott, a founder of the modern coaching profession. Earn credentials that clients recognise and trust, straight from the source.',
+      imagine: 'Imagine introducing yourself with a credential that ends the doubt, and lets you charge what you’re truly worth.',
+      features: ['ICF-accredited', 'Dr. Cherie Carter-Scott', 'Recognised worldwide'], cta: 'Explore certification' },
+    { id: 'spotlight', area: 'Spotlight', icon: 'star', title: 'Get your story in front of the world.',
+      problem: 'Your story could change someone’s life, but it’s sitting unheard, with no stage and no audience to share it from.',
+      body: 'We give coaches a platform. Write for our audience, sit for an interview that showcases your journey, or announce your new book or event: real visibility, from a brand coaches already trust.',
+      imagine: 'Imagine your name featured where your dream clients already gather, and the credibility that follows you everywhere after.',
+      features: ['Write an article', 'Be interviewed', 'Announce a launch'], cta: 'Get my story seen', join: true },
+    { id: 'belong', area: 'Belong', icon: 'people', title: 'Join a community built for coaches like you.',
+      problem: 'Building a coaching business can be lonely: surrounded by people who don’t quite get why you do this, with no one to grow alongside.',
+      body: 'Become part of the growing Life Coach Code community, get invited to speak at our events, and surround yourself with coaches building what you’re building. The best coaches never grow alone.',
+      imagine: 'Imagine a room, online and in person, full of people who get it, cheering your next win as if it were their own.',
+      features: ['Private community', 'Speak at our events', 'Grow alongside peers'], cta: 'Join the community', join: true }
+  ],
+  // "Not sure where to start?": each answer points to the solutions that change the most
+  finder: [
+    { label: 'I need more clients', picks: ['clients', 'reach', 'growth'] },
+    { label: 'My website isn’t converting', picks: ['foundation', 'automation', 'growth'] },
+    { label: 'I want to write a book', picks: ['authority', 'spotlight'] },
+    { label: 'I’m not getting seen', picks: ['visibility', 'reach', 'spotlight'] }
+  ],
+  // three ways to join Life Coach Code as a coach
+  join: [
+    { id: 'interview', title: 'Get interviewed', text: 'Apply for an interview that we publish on our platform, so seekers can meet you and your story.',
+      cta: 'Apply for an interview', url: 'https://forms.gle/2si9WyZNfDhLExxR8',
+      links: [{ label: 'Read recent interviews', url: 'https://www.lifecoachcode.com/find-life-coach' }, { label: 'Find a coach with our matching tool', url: 'https://www.lifecoachcode.com/find-life-coach' }] },
+    { id: 'author', title: 'Publish your articles', text: 'Apply to be a published author on Life Coach Code and share your articles with our readers.',
+      cta: 'Apply to publish', url: 'https://forms.gle/9iF1N3BeprdmYGmh7' },
+    { id: 'account', title: 'Create a free coach account', text: 'Join the network of coaches on Life Coach Code: a profile, a community and a place to be found.',
+      cta: 'Create my free account', url: 'https://www.lifecoachcode.com/join' }
+  ],
+  // interviews with coaches of this fair, and searches through the articles coaches have published
+  interviews: [
+    { title: 'Soonjin Cho, interviewed by Life Coach Code', url: 'https://www.lifecoachcode.com/2024/07/28/find-life-coach-soonjin-cho/' },
+    { title: 'Rachel Tamilio, interviewed by Life Coach Code', url: 'https://www.lifecoachcode.com/2023/09/06/find-life-coach-rachel-tamilio/' }
+  ],
+  articleSearch: 'https://www.lifecoachcode.com/?s=',
+  articleTopics: ['Mindset', 'Resilience', 'Relationships', 'Purpose', 'Burnout', 'Leadership'],
+  testimonials: [
+    { quote: 'I appreciate and value everything Life Coach Code offered me. The opportunity and exposure to reach more diverse people in the world whom I can help all met my expectations. It was greatly worth the money and time that I invested.', name: 'Rachel Lee White', role: 'Coach & Author' },
+    { quote: 'Very professional. I found value and, yes, it was worth the investment. Just being able to show that I was featured in your magazine boosts my credibility.', name: 'Allison Cowan', role: 'Featured Coach' },
+    { quote: 'My free article was posted, and the number of articles allowed plus the editing offered was a great value and done so well! Being highlighted as a Top Coach of the Month was such an honor. Dejan and Life Coach Code are awesome!', name: 'Maureen Scanlon', role: 'Top Coach of the Month' },
+    { quote: 'I really appreciate the opportunity to share my story in hopes of inspiring others on this platform! Dejan was super communicative and service-centered toward his audience.', name: 'Lauren Wenzell', role: 'Life Coach' },
+    { quote: 'Customer service was phenomenal to work with. It was a wonderful way for me to get exposure, and I am grateful.', name: 'Amy Mastrud', role: 'Coach' },
+    { quote: 'It made me feel I was part of a community of coaches who want to contribute and serve to the best of their abilities, and transform the world we live in.', name: 'Roxana Radulescu', role: 'Coach & Contributor' },
+    { quote: 'My experience with Life Coach Code was very professional and inspiring. I appreciate the opportunity to share my life coaching journey within the platform and the extra exposure it has given me.', name: 'Patrycja Lucyna Altynska', role: 'Life Coach' },
+    { quote: 'You guys are amazing. Thank you for the time, talent, and expertise you have given to me.', name: 'Nikky Jindal', role: 'Coach' }
+  ]
+};
+
+/* =========================================================================
+   The Garden, down the left-hand path: a place to hang out between the talks. Everything there
+   happens by walking up to it: the Elixir Bar, the fortune cookies, the lantern pier, the
+   meditation circle and the stone that asks "Should you write a book?"
+   ========================================================================= */
+window.FAIR_GARDEN = {
+  drinks: [
+    { id: 'golden-chai', color: '#d99a4e', name: 'Golden Chai', icon: '☕', note: 'Warm spice for a brave next chapter.' },
+    { id: 'clarity-tea', color: '#9fd08a', name: 'Clarity Tea', icon: '🍵', note: 'Jasmine and mint, for the decision you have been circling.' },
+    { id: 'moon-milk', color: '#e6dcff', name: 'Moon Milk', icon: '🥛', note: 'Lavender and honey. Rest is part of the work.' },
+    { id: 'sparkling-gratitude', color: '#fff1b0', name: 'Sparkling Gratitude', icon: '🥂', note: 'Elderflower and bubbles: toast what is already going right.' },
+    { id: 'midnight-cocoa', color: '#7a4428', name: 'Midnight Cocoa', icon: '🍫', note: 'Dark and velvety, for the pages you write after everyone is asleep.' },
+    { id: 'fresh-start', color: '#fff176', name: 'Fresh Start Lemonade', icon: '🍋', note: 'Life gave you lemons. You know what to do.' }
+  ],
+  fortunes: [
+    'The chapter you are afraid to write is the one someone is waiting to read.',
+    'Your voice is already a book. It only needs someone to listen.',
+    'A small step today is a whole page tomorrow.',
+    'The story you think is ordinary is someone else’s map.',
+    'What you have survived is exactly what you are here to teach.',
+    'Clarity comes from speaking, not from waiting.',
+    'Someone you have not met yet is looking for your words.',
+    'Your next client is reading something right now. Make it yours.',
+    'Rest is not the opposite of progress. It is part of it.',
+    'Courage is a muscle. You used it just by being here.',
+    'The best time to start your book was years ago. The second best is this week.',
+    'You do not need more confidence. You need one more yes.',
+    'Kindness to yourself is the first draft of every great story.',
+    'The world needs your method, not your perfection.',
+    'An open door is waiting at the end of your next conversation.',
+    'Your past is a library. Choose which books to lend.',
+    'Speak it today, and it will be a book before you know it.',
+    'A grateful heart is a magnet for good chapters.',
+    'Every expert was once a beginner who did not give up.',
+    'You are allowed to grow faster than people expect.',
+    'The lesson that broke you open is the one that will open others.',
+    'Ask for help. It is the bravest thing a leader does.',
+    'Your calm is contagious. Share it generously.',
+    'Today a stranger will remember something kind you said.',
+    'The page is not blank. It is full of possibility.',
+    'Lucky numbers: 1 call, 30 days, 1 book.',
+    'Your story has a happy ending. You are writing the middle.',
+    'What you seek is also seeking you.',
+    'Plant your words. Some will grow into forests.',
+    'Invisible no longer: the right people are about to find you.'
+  ],
+  // "Should you write a book?": every answer scores 0 to 3; the signs decide the result
+  bookQuiz: {
+    title: 'Should you write a book?',
+    questions: [
+      { q: 'How often do people ask for your advice, or tell you “you should write a book”?', options: [['All the time', 3], ['Sometimes', 2], ['Rarely', 1], ['Never', 0]] },
+      { q: 'Is there a story, a lesson or a method that changed your life, or your clients’ lives?', options: [['Yes, and I share it all the time', 3], ['Yes, but I have never told it fully', 3], ['I am still finding it', 1], ['Not really', 0]] },
+      { q: 'How do you feel when you picture your name on a book cover?', options: [['Excited: it is a dream of mine', 3], ['Curious, and a little scared', 2], ['Unsure it is for me', 1], ['Nothing much', 0]] },
+      { q: 'Do you coach, teach, speak or lead other people?', options: [['Yes, it is my work', 3], ['Sometimes', 2], ['I would love to', 1], ['No', 0]] },
+      { q: 'What has stopped you from writing it so far?', options: [['Time, and the blank page', 3], ['Not knowing where to start', 3], ['Doubting anyone would read it', 2], ['I have never wanted to', 0]] },
+      { q: 'Could you talk about your topic for an hour, without notes?', options: [['Easily', 3], ['With a little preparation', 2], ['Maybe', 1], ['No', 0]] },
+      { q: 'If your book reached the right reader, what would change for them?', options: [['Their life. I know it.', 3], ['Something important', 2], ['I am not sure', 1], ['Probably nothing', 0]] }
+    ],
+    results: [
+      { min: 15, title: 'All the signs say yes.', text: 'There is a book in you, and people are already asking for it. With Speak Your Book you say it out loud, and we shape it into a finished, published book in 30 to 90 days. Let’s talk about it.', call: true },
+      { min: 9, title: 'The signs are pointing that way.', text: 'A book is forming in you, even if it does not have a shape yet. A free, no-pressure call is the gentlest way to find it, and you leave with a plan either way.', call: true },
+      { min: 0, title: 'Not yet, and that is all right.', text: 'Every author here started with a spark. Enjoy the books, meet the authors, and when your story starts asking to be told, we will be here.', call: false }
+    ]
+  }
 };
 
 /* =========================================================================
@@ -498,10 +735,9 @@ window.FAIR_LINKS = {
 window.FAIR_EVENT = {
   name: 'Speak Your Book',
   date: '2026-11-01', // the day of the event (YYYY-MM-DD)
-  // When the start time is confirmed, add it with its UTC offset, for example
-  // '2026-11-01T17:00:00+00:00'. The fair then counts down to the minute and shows
-  // every visitor the start time in their own time zone.
-  start: '',
+  // The start, with its UTC offset: the fair counts down to the minute and shows every visitor
+  // the time in their own time zone. 2:15 pm CET = 8:15 am EST = 3:15 pm in Romania.
+  start: '2026-11-01T14:15:00+01:00',
   where: 'Live on Zoom',
   price: 'Free',
   // the registration form: register is its link, registerEmbed the address from Google Forms'
@@ -514,12 +750,24 @@ window.FAIR_EVENT = {
   // Who speaks when, once it is decided (on WordPress: Settings > Virtual Book Fair). at: the exact
   // time with its UTC offset; visitors see it in their own time zone and can set reminders.
   // minutes is optional: without it a talk lasts until the next entry. Breaks: break: true.
-  // schedule: [
-  //   { at: '2026-11-01T17:00:00+00:00', author: 'chuck-barnard', title: 'Raising resilient teens', minutes: 20 },
-  //   { at: '2026-11-01T17:20:00+00:00', break: true, title: 'Lanterns and a breathing minute' }
-  // ]
-  schedule: [],
-  about: 'A free, live virtual event on Zoom, hosted by Life Coach Code. Every author in this fair speaks at the event: come and meet them live.'
+  // { at: '2026-11-01T17:20:00+01:00', break: true, title: 'Lanterns and a breathing minute' } adds a break.
+  // The official programme, in CET (UTC+1) on 1 November: 2:15 to 7:30 pm CET, 8:15 am to 1:30 pm EST.
+  schedule: [
+    { at: '2026-11-01T14:15:00+01:00', author: 'monika-puiu', title: 'Everything Happens For You', minutes: 25 },
+    { at: '2026-11-01T14:40:00+01:00', author: 'soonjin-cho', title: 'Finding Love in the Mirror', minutes: 25 },
+    { at: '2026-11-01T15:05:00+01:00', author: 'bengu-davchevski', title: 'How to Build Yourself Up in Difficult Times', minutes: 15 },
+    { at: '2026-11-01T15:20:00+01:00', author: 'susan-j-razavi', title: 'Conscious Integrative Therapy', minutes: 25 },
+    { at: '2026-11-01T15:45:00+01:00', author: 'jennifer-a-schmeisser', title: 'When the Blueprint Burned', minutes: 25 },
+    { at: '2026-11-01T16:10:00+01:00', author: 'jessica-v-fuentes', title: 'The Journey to Empowerment Through Self-Love', minutes: 25 },
+    { at: '2026-11-01T16:35:00+01:00', author: 'sonia-jenkins', title: 'The Invisible Midlife Woman', minutes: 25 },
+    { at: '2026-11-01T17:00:00+01:00', author: 'beth-donovan', title: 'Life Is Happening Now', minutes: 25 },
+    { at: '2026-11-01T17:25:00+01:00', author: 'yevheniya-shalimova', title: 'Truly Yours, Life', minutes: 25 },
+    { at: '2026-11-01T17:50:00+01:00', author: 'chuck-barnard', title: 'Teen Mental Health · More Than a Game · Prince and the Prodigal', minutes: 25 },
+    { at: '2026-11-01T18:15:00+01:00', author: 'tanya-fasnacht-jolliffe', title: 'Food Isn’t the Problem', minutes: 25 },
+    { at: '2026-11-01T18:40:00+01:00', author: 'dolores-fazzino', title: 'Healing Unraveled', minutes: 25 },
+    { at: '2026-11-01T19:05:00+01:00', author: 'rachel-tamilio', title: 'Curiously Certain', minutes: 25 }
+  ],
+  about: 'A free, live virtual event on Zoom, hosted by Life Coach Code. The authors of this fair speak one after another: come and meet them live.'
 };
 
 /* =========================================================================
@@ -530,6 +778,8 @@ window.FAIR_EVENT = {
    ========================================================================= */
 window.FAIR_LIVE = {
   enabled: true,
+  // false hides the "here now" counter in the top bar (visitors still see and greet each other)
+  showCount: true,
   brokers: ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'],
   room: 'lcc-virtual-book-fair-2026',
   // Public keys for the private author links (made with: node tools/author-links.mjs).
@@ -720,7 +970,7 @@ window.FAIR_CONTACT = {
 window.FAIR_AUTHORS = (() => {
   const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const map = new Map();
-  window.FAIR_BOOKS.forEach((b) => {
+  window.FAIR_BOOKS.filter((b) => !b.sponsored).forEach((b) => {
     const id = slugify(b.author);
     if (!map.has(id)) map.set(id, { id, name: b.author, displayName: b.author, credentials: '', books: [] });
     const a = map.get(id);

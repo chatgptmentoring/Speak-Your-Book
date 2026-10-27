@@ -27,6 +27,18 @@ const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const finePointer = window.matchMedia('(pointer: fine)').matches;
 const bySlug = Object.fromEntries(BOOKS.map((b) => [b.slug, b]));
+// The hall's books (Life Coach Code's own books stand in its pavilion), and its booths: an author
+// with several books (book.booth) has one booth for all of them
+const HALL = BOOKS.filter((b) => !b.sponsored);
+const LCC_BOOKS = BOOKS.filter((b) => b.sponsored);
+const BOOTHS = [];
+HALL.forEach((b) => {
+  const key = b.booth || b.slug;
+  let st = BOOTHS.find((x) => x.key === key);
+  if (!st) { st = { key, books: [] }; BOOTHS.push(st); }
+  st.books.push(b);
+});
+const boothNo = (b) => BOOTHS.findIndex((st) => st.books.includes(b)) + 1;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const mod = (a, m) => ((a % m) + m) % m;
 const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
@@ -505,12 +517,12 @@ const Passport = (() => {
   const got = (store.get(KEY, []) || []).filter((s) => bySlug[s]);
   let fresh = null, lastFocus = null;
   const has = (slug) => got.includes(slug);
-  const updateCount = () => { count.textContent = `${got.length}/${BOOKS.length}`; };
+  const updateCount = () => { count.textContent = `${got.length}/${HALL.length}`; };
   const seal = (i) => `<svg viewBox="0 0 120 120" aria-hidden="true"><defs><path id="seal-path-${i}" d="M60,60 m-45,0 a45,45 0 1,1 90,0 a45,45 0 1,1 -90,0"/></defs>
     <circle cx="60" cy="60" r="57" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="60" cy="60" r="36" fill="none" stroke="currentColor" stroke-width="1.5"/>
     <text font-size="8.6" font-weight="700" fill="currentColor" font-family="Manrope, sans-serif"><textPath href="#seal-path-${i}" textLength="278" lengthAdjust="spacing">VIRTUAL BOOK FAIR ✦ LIFE COACH CODE ✦</textPath></text></svg>`;
   function render() {
-    list.innerHTML = BOOKS.map((b, i) => {
+    list.innerHTML = HALL.map((b, i) => {
       const c = has(b.slug);
       const rot = (hashStr(b.slug) % 22) - 11;
       return `<li class="stamp${c ? ' is-collected' : ''}${fresh === b.slug ? ' is-new' : ''}" style="--rot:${rot}deg;--ink-color:${INKS[i % INKS.length]}">
@@ -518,11 +530,11 @@ const Passport = (() => {
         ${c ? seal(i) + `<img src="${coverSrc(b, 480)}" alt="" loading="lazy">` : '<span aria-hidden="true">?</span>'}</button>
         <span class="stamp__label">${esc(b.title)}</span></li>`;
     }).join('');
-    const left = BOOKS.length - got.length;
+    const left = HALL.length - got.length;
     status.textContent = got.length === 0
       ? 'Your passport is empty. Open a booth to collect your first stamp.'
       : left === 0 ? 'Every stamp collected. Thank you for touring the whole fair!'
-        : `${got.length} of ${BOOKS.length} stamps collected. ${left} ${left === 1 ? 'booth' : 'booths'} to go.`;
+        : `${got.length} of ${HALL.length} stamps collected. ${left} ${left === 1 ? 'book' : 'books'} to go.`;
     reward.hidden = left !== 0;
   }
   function open() {
@@ -541,7 +553,7 @@ const Passport = (() => {
     if (lastFocus && lastFocus.focus && lastFocus !== document.body) lastFocus.focus({ preventScroll: true });
   }
   function stamp(slug) {
-    if (has(slug)) return;
+    if (has(slug) || !HALL.includes(bySlug[slug])) return;
     got.push(slug);
     store.set(KEY, got);
     fresh = slug;
@@ -550,16 +562,16 @@ const Passport = (() => {
     void btn.offsetWidth;
     btn.classList.add('is-bump');
     Sound.play('stamp');
-    toast(`<i>✓</i> Passport stamp collected · ${got.length} of ${BOOKS.length}`);
-    if (got.length === BOOKS.length) {
+    toast(`<i>✓</i> Passport stamp collected · ${got.length} of ${HALL.length}`);
+    if (got.length === HALL.length) {
       track('passport_complete');
       setTimeout(() => { Petals.burst(); Sound.play('win'); open(); }, 1500);
     }
   }
   async function certificate(name) {
-    const covers = await Promise.all(BOOKS.map((b) => (has(b.slug) ? loadImg(coverSrc(b, 480)) : null)));
+    const covers = await Promise.all(HALL.map((b) => (has(b.slug) ? loadImg(coverSrc(b, 480)) : null)));
     const c = K.makeCertificate({
-      name, count: got.length, total: BOOKS.length, covers, logo: LOGO,
+      name, count: got.length, total: HALL.length, covers, logo: LOGO,
       lines: { footer: EventInfo && EventInfo.upcoming() ? `Meet the authors live · ${EVENT.name} · ${EventInfo.dateLong()} · free on Zoom` : 'The Virtual Book Fair · Life Coach Code' },
       date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     });
@@ -599,7 +611,7 @@ function buildBookChapters() {
     s.id = 'book-' + b.slug;
     s.setAttribute('aria-labelledby', 'title-' + b.slug);
     s.innerHTML = `<article class="card card--book">
-      <p class="card__count">Booth ${pad2(k + 1)} <i></i> ${pad2(BOOKS.length)}</p>
+      <p class="card__count">${b.sponsored ? 'From Life Coach Code' : `Booth ${pad2(boothNo(b))} <i></i> ${pad2(BOOTHS.length)}`}</p>
       <img class="card__cover" src="${coverSrc(b, 480)}" alt="Cover of ${esc(b.title)}" loading="lazy" width="480" height="${Math.round(480 * b.cover.h / b.cover.w)}">
       <p class="card__tags">${soon ? '<span class="soon-dot">● Coming soon</span> · ' : ''}${b.tags.map(esc).join(' · ')}</p>
       <h2 class="card__title" id="title-${b.slug}">${esc(b.title)}</h2>
@@ -705,7 +717,11 @@ const Detail = (() => {
         <button class="btn btn--ghost btn--sm" type="button" data-share>Share</button></div>
       <div class="slider" data-slider>
         <div class="slider__track">${slides.join('')}</div>
-        <div class="slider__dots">${slides.map((_, i) => `<button type="button" aria-label="Card ${i + 1} of ${slides.length}"${i ? '' : ' aria-current="true"'} data-dot="${i}"></button>`).join('')}</div>
+        <div class="slider__nav">
+          <button class="slider__arrow" type="button" data-slide="-1" aria-label="Previous card" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="slider__dots">${slides.map((_, i) => `<button type="button" aria-label="Card ${i + 1} of ${slides.length}"${i ? '' : ' aria-current="true"'} data-dot="${i}"></button>`).join('')}</div>
+          <button class="slider__arrow" type="button" data-slide="1" aria-label="Next card"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
       </div>`;
     if (au) h += authorCard(au);
     h += `<details class="bi__more-text"><summary>Read more about this book</summary>${b.description.map((p) => `<p class="bi__desc">${esc(p)}</p>`).join('')}
@@ -728,17 +744,49 @@ const Detail = (() => {
   function bindSlider(root) {
     const sl = $('[data-slider]', root);
     if (!sl) return;
-    const track = $('.slider__track', sl), dots = $$('[data-dot]', sl);
+    const track = $('.slider__track', sl), dots = $$('[data-dot]', sl), arrows = $$('[data-slide]', sl);
+    let at = 0;
+    const n = dots.length;
+    const left = (k) => track.children[k].offsetLeft - track.children[0].offsetLeft;
+    const max = () => track.scrollWidth - track.clientWidth;
+    // once the track has reached its end, the last few cards are all in view: the last dot stands for them
+    const lastStop = () => { let k = 0; for (let i = 1; i < n; i++) if (left(i) < max() - 4) k = i; return k; };
+    const show = () => {
+      dots.forEach((d, k) => d.toggleAttribute('aria-current', k === at));
+      arrows.forEach((a) => { a.disabled = +a.dataset.slide < 0 ? at === 0 : at === n - 1; });
+    };
+    let target = null, since = 0;
     const sync = () => {
-      const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth * 0.86));
-      dots.forEach((d, k) => d.toggleAttribute('aria-current', k === Math.min(i, dots.length - 1)));
+      // while an arrow or a dot is still gliding the track there, the card it chose stays chosen
+      if (target !== null) {
+        if (Math.abs(track.scrollLeft - target) > 4 && performance.now() - since < 1200) return;
+        target = null;
+      }
+      if (max() <= 4 || !track.isConnected) return;
+      if (track.scrollLeft >= max() - 4) at = n - 1;
+      else {
+        let best = 0;
+        for (let k = 1; k <= lastStop(); k++) if (Math.abs(left(k) - track.scrollLeft) < Math.abs(left(best) - track.scrollLeft)) best = k;
+        at = best;
+      }
+      show();
+    };
+    const go = (k) => {
+      at = Math.max(0, Math.min(n - 1, k));
+      if (left(at) >= max() - 4) at = n - 1;
+      show();
+      target = Math.min(left(at), max());
+      since = performance.now();
+      track.scrollTo({ left: target, behavior: reduceMotion ? 'auto' : 'smooth' });
     };
     track.addEventListener('scroll', () => requestAnimationFrame(sync), { passive: true });
-    dots.forEach((d) => d.addEventListener('click', () => {
-      const k = +d.dataset.dot;
-      const slide = track.children[k];
-      if (slide) track.scrollTo({ left: slide.offsetLeft - track.offsetLeft, behavior: reduceMotion ? 'auto' : 'smooth' });
+    dots.forEach((d) => d.addEventListener('click', () => go(+d.dataset.dot)));
+    // the small arrows either side of the dots: next and previous card
+    arrows.forEach((a) => a.addEventListener('click', () => {
+      const d = +a.dataset.slide;
+      go(d < 0 && at === n - 1 && left(n - 1) >= max() - 4 ? Math.min(lastStop(), n - 2) : at + d);
     }));
+    sync();
   }
 
   function show(slug) {
@@ -757,7 +805,7 @@ const Detail = (() => {
     body.innerHTML = html(b);
     bindSlider(body);
     panel.scrollTop = 0;
-    countEl.textContent = `Booth ${pad2(BOOKS.indexOf(b) + 1)} of ${pad2(BOOKS.length)}`;
+    countEl.textContent = b.sponsored ? 'From Life Coach Code' : `Booth ${pad2(boothNo(b))} of ${pad2(BOOTHS.length)}`;
     if (world) world.focus(slug);
     Context.show('book-' + slug);
     Sound.play('open');
@@ -801,7 +849,8 @@ const Detail = (() => {
   }
   function step(d) {
     if (!current) return;
-    const b = BOOKS[mod(BOOKS.indexOf(current) + d, BOOKS.length)];
+    const row = current.sponsored ? LCC_BOOKS : HALL;
+    const b = row[mod(row.indexOf(current) + d, row.length)];
     history.replaceState(null, '', '#booth/' + b.slug);
     show(b.slug);
   }
@@ -856,14 +905,21 @@ const MapPanel = (() => {
   let lastFocus = null;
   const GROUPS = [
     { title: 'Entrance & hall', ids: ['welcome', 'hall', 'oracle'] },
+    { title: 'The Garden · left path', ids: ['garden', 'garden-bar', 'garden-cookies', 'garden-pier', 'garden-meditation', 'garden-quiz'] },
+    { title: 'Life Coach Code · right path', ids: ['lcc', 'lcc-solutions', 'lcc-join', 'lcc-guide'] },
+    { title: 'Books from Life Coach Code', books: 'lcc' },
     { title: 'The booths', books: true },
     { title: 'The stage & the temple', ids: ['speak', 'about', 'finale'] }
   ];
-  const LABELS = { welcome: 'Entrance arch', hall: 'The Grand Hall', oracle: 'The Book Oracle', speak: 'Speak Your Book stage', about: 'Temple of Life Coach Code', finale: 'Your book here' };
+  const LABELS = {
+    welcome: 'Entrance arch', hall: 'The Grand Hall', oracle: 'The Book Oracle', speak: 'Speak Your Book stage', about: 'Temple of Life Coach Code', finale: 'Your book here',
+    garden: 'The Garden', 'garden-bar': 'The Elixir Bar', 'garden-cookies': 'Fortune cookies', 'garden-pier': 'Lantern pier', 'garden-meditation': 'Meditation circle', 'garden-quiz': 'Should you write a book?',
+    lcc: 'Life Coach Code', 'lcc-solutions': 'Twelve solutions for coaches', 'lcc-join': 'Join as a coach', 'lcc-guide': 'Your Life Coach Code guide'
+  };
   function render() {
-    list.innerHTML = GROUPS.map((g) => {
+    list.innerHTML = GROUPS.filter((g) => g.books !== 'lcc' || LCC_BOOKS.length).map((g) => {
       const items = g.books
-        ? BOOKS.map((b, i) => `<li><button type="button" class="map__book" data-place="book-${b.slug}"><img src="${coverSrc(b, 480)}" alt="" loading="lazy"><span><small>Booth ${pad2(i + 1)}${isSoon(b) ? ' · coming soon' : ''}${People.isOnline(authorOfSlug[b.slug] && authorOfSlug[b.slug].id) ? ' · <em>author here now</em>' : ''}</small>${esc(b.title)}</span>${Passport.has(b.slug) ? '<i class="map__stamp" aria-label="stamp collected">✓</i>' : ''}</button></li>`).join('')
+        ? (g.books === 'lcc' ? LCC_BOOKS : HALL).map((b) => `<li><button type="button" class="map__book" data-place="book-${b.slug}"><img src="${coverSrc(b, 480)}" alt="" loading="lazy"><span><small>${b.sponsored ? 'Life Coach Code booth' : `Booth ${pad2(boothNo(b))}`}${isSoon(b) ? ' · coming soon' : ''}${People.isOnline(authorOfSlug[b.slug] && authorOfSlug[b.slug].id) ? ' · <em>author here now</em>' : ''}</small>${esc(b.title)}</span>${Passport.has(b.slug) ? '<i class="map__stamp" aria-label="stamp collected">✓</i>' : ''}</button></li>`).join('')
         : g.ids.map((id) => `<li><button type="button" class="map__place" data-place="${id}">${esc(LABELS[id])}</button></li>`).join('');
       return `<div class="map__group"><h3>${esc(g.title)}</h3><ul class="${g.books ? 'map__books' : 'map__places'}">${items}</ul></div>`;
     }).join('');
@@ -917,7 +973,22 @@ const ACTION_LABELS = {
   event: () => (EventInfo && EventInfo.upcoming() ? { verb: 'See the live event', what: `${EVENT.name} · ${EventInfo.dayShort()}` } : { verb: 'Speak your own book', what: 'Free discovery call' }),
   author: (info) => ({ verb: People.isOnline(info.id) ? 'Say hello' : 'Meet the author', what: authorById[info.id] ? authorById[info.id].displayName : '' }),
   seat: () => ({ verb: 'Take a seat', what: 'Front row for the live event' }),
-  peer: (info) => ({ verb: info.author ? 'Say hello' : 'Wave hello', what: info.author ? `${info.author.name} · Author` : (info.name || 'A visitor') })
+  peer: (info) => ({ verb: info.author ? 'Say hello' : 'Wave hello', what: info.author ? `${info.author.name} · Author` : (info.name || 'A visitor') }),
+  spot: (info) => ({
+    bar: { verb: 'Order a drink', what: 'The Elixir Bar' },
+    cookies: { verb: 'Crack a fortune cookie', what: 'A message for you' },
+    pier: { verb: 'Release a lantern', what: 'Lantern pier' },
+    meditate: { verb: 'Sit and breathe', what: 'Meditation circle' },
+    quiz: { verb: 'Should you write a book?', what: 'Seven questions' },
+    bench: { verb: 'Sit down', what: 'Hang out in the Garden' },
+    'garden-gate': { verb: 'Walk to the Garden', what: 'Drinks, fortune cookies, lanterns' },
+    'lcc-gate': { verb: 'Walk to Life Coach Code', what: 'Twelve solutions for coaches' },
+    'lcc-guide': { verb: 'Ask the guide', what: 'Your Life Coach Code guide' },
+    'lcc-join': { verb: 'Join as a coach', what: 'Three ways in' },
+    'lcc-call': { verb: 'Book a free call', what: 'Life Coach Code' },
+    'lcc-words': { verb: 'Read their words', what: 'Coaches we’ve worked with' }
+  })[info.id] || { verb: 'Look', what: '' },
+  solution: (info) => { const s = Spots.label(info.index); return s ? { verb: 'See this solution', what: `${pad2(info.index + 1)} · ${s.area}` } : { verb: 'Look', what: '' }; }
 };
 
 function interact(info) {
@@ -955,7 +1026,7 @@ function interact(info) {
       break;
     case 'event':
       if (EventInfo && EventInfo.upcoming()) EventUI.open();
-      else window.open(LINKS.discovery, '_blank', 'noopener');
+      else Call.open('event');
       break;
     case 'author':
       AuthorPanel.open(info.id);
@@ -972,6 +1043,8 @@ function interact(info) {
     case 'peer':
       People.wave(info);
       break;
+    case 'spot': Spots.act(info); break;
+    case 'solution': Spots.solution(info.index); break;
     default:
   }
 }
@@ -1101,7 +1174,7 @@ const Oracle = (() => {
   function answer(k) {
     if (busy) return;
     if (k === 'surprise') {
-      const pool = BOOKS.filter((b) => b !== last);
+      const pool = HALL.filter((b) => b !== last);
       done(pool[Math.floor(Math.random() * pool.length)], [], false);
       track('oracle_surprise');
       return;
@@ -1110,7 +1183,7 @@ const Oracle = (() => {
     if (answers.length < QUIZ.length) { ask(); Sound.play('pop'); return; }
     let ranked = scoreQuiz(QUIZ, answers, BOOKS).map((x) => x.b);
     if (ranked.length > 1 && ranked[0] === last) ranked = [...ranked.slice(1, 2), ranked[0], ...ranked.slice(2)];
-    const best = ranked[0] || BOOKS[Math.floor(Math.random() * BOOKS.length)];
+    const best = ranked[0] || HALL[Math.floor(Math.random() * HALL.length)];
     done(best, ranked.filter((b) => b !== best).slice(0, 2), true);
     track('oracle_quiz', { book: best.slug });
   }
@@ -1180,7 +1253,7 @@ const EventUI = (() => {
       flag: after ? ['SPEAK', 'YOUR', 'BOOK', '-', 'VIRTUAL BOOK FAIR'] : ['SPEAK', 'YOUR', 'BOOK', '-', EventInfo.dateShort().toUpperCase(), EVENT.where.toUpperCase()],
       poster: after
         ? { pill: 'LIFE COACH CODE', eyebrow: 'THANK YOU FOR JOINING US', title1: 'Speak', title2: 'Your Book', date: 'Your book could be next', body: 'Book a free discovery call and tell us about the book you have been carrying.', cta: 'FREE DISCOVERY CALL', foot: 'PRESS E OR TAP' }
-        : { pill: `${EVENT.where} · ${EVENT.price}`.toUpperCase(), eyebrow: 'LIFE COACH CODE PRESENTS', title1: 'Speak', title2: 'Your Book', date: EventInfo.dateLong(), body: 'Meet every author of this fair, live. Each of them speaks at the event.', cta: 'REGISTER FREE', foot: 'PRESS E OR TAP TO SAVE YOUR SEAT' },
+        : { pill: `${EVENT.where} · ${EVENT.price}`.toUpperCase(), eyebrow: 'LIFE COACH CODE PRESENTS', title1: 'Speak', title2: 'Your Book', date: EventInfo.dateLong(), body: 'Meet the authors of this fair, live: one talk after another, all afternoon.', cta: 'REGISTER FREE', foot: 'PRESS E OR TAP TO SAVE YOUR SEAT' },
       screens: screens(st)
     };
   }
@@ -1602,7 +1675,7 @@ const People = (() => {
   }
   function onStatus(s) {
     status = s;
-    btn.hidden = s !== 'live';
+    btn.hidden = s !== 'live' || (window.FAIR_LIVE || {}).showCount === false;
     btn.classList.toggle('is-live', s === 'live');
     btn.classList.toggle('is-off', s !== 'live');
     updateCount();
@@ -1988,11 +2061,11 @@ const Tour = (() => {
     const up = EventInfo && EventInfo.upcoming();
     steps = [
       { id: 'welcome', title: 'Welcome to the fair', text: 'Life Coach Code is your host. Every book in this hall was written by a coach, a therapist or a leader. Let’s walk it together.' },
-      { id: 'hall', title: 'The Grand Hall', text: `${BOOKS.length} booths, each with a book, its author beside it, and a piece that carries the spirit of the story.` },
+      { id: 'hall', title: 'The Grand Hall', text: `${BOOTHS.length} booths and ${HALL.length} books, each with its author beside it and a piece that carries the spirit of the story. Two paths branch off here: the Garden to the left, Life Coach Code to the right.` },
       { id: 'oracle', title: 'The Book Oracle', text: 'Not sure where to begin? Answer three questions and the Oracle turns over the book that is waiting for you.' },
-      ...BOOKS.map((b, k) => ({
+      ...HALL.map((b) => ({
         id: 'book-' + b.slug,
-        title: `Booth ${k + 1} · ${b.title}`,
+        title: `Booth ${boothNo(b)} · ${b.title}`,
         text: `${isSoon(b) ? 'Coming soon. ' : ''}${b.hook} By ${authorName(b)}.`
       })),
       { id: 'speak', title: 'The Speak Your Book stage', text: up ? `On ${EventInfo.dateLong()} the authors speak here, live on Zoom. Registration is free.` : 'Where coaches learn to speak their book into being.' },
@@ -2105,8 +2178,10 @@ function doAction(name) {
     case 'passport': Passport.open(); break;
     case 'mybooth': AuthorHi.go(); break;
     case 'between': Between.open(); break;
-    case 'breathe': Breathe.open(); break;
-    case 'lantern': Lantern.open(); break;
+    case 'breathe': goPlace('garden-meditation'); break;
+    case 'lantern': goPlace('garden-pier'); break;
+    case 'bookquiz': goPlace('garden-quiz'); break;
+    case 'call': Call.open('menu'); break;
     case 'quiz':
       Oracle.restart();
       if (cleanView.matches) Context.show('oracle'); else goPlace('oracle');
@@ -2149,6 +2224,271 @@ const Register = (() => {
     });
   }
   return { init, open };
+})();
+
+/* =========================================================================
+   A free call with Life Coach Code: the Calendly booking page opens in a window inside the
+   fair (or a new tab, without the embed). Every "Create your book with us", "Book a free call"
+   and "Schedule a call" button leads here.
+   ========================================================================= */
+const Call = (() => {
+  const URL_ = LINKS.discovery;
+  const EMBED = LINKS.discoveryEmbed || URL_;
+  const usable = /^https:\/\/calendly\.com\//.test(EMBED);
+  const box = $('#call-frame');
+  let mounted = false;
+  const sheet = makeSheet('call-panel', { onOpen: mount });
+  function iframe() {
+    const f = document.createElement('iframe');
+    f.title = 'Book a free call with Life Coach Code';
+    f.src = `${EMBED}${EMBED.includes('?') ? '&' : '?'}embed_type=Inline&embed_domain=${encodeURIComponent(location.hostname)}`;
+    f.addEventListener('load', () => sheet.el.classList.add('is-loaded'), { once: true });
+    box.appendChild(f);
+  }
+  function mount() {
+    if (mounted) return;
+    mounted = true;
+    const go = () => {
+      try { window.Calendly.initInlineWidget({ url: EMBED, parentElement: box }); } catch (e) { iframe(); }
+      setTimeout(() => sheet.el.classList.add('is-loaded'), 1200);
+    };
+    if (window.Calendly) { go(); return; }
+    const sc = document.createElement('script');
+    sc.src = 'https://assets.calendly.com/assets/external/widget.js';
+    sc.async = true;
+    sc.onload = go;
+    sc.onerror = iframe;
+    document.head.appendChild(sc);
+  }
+  function open(from = 'link') {
+    if (!usable) { window.open(URL_, '_blank', 'noopener'); return; }
+    sheet.open();
+    track('call_open', { from });
+  }
+  function init() {
+    $('#call-open').href = URL_;
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[data-call], a[href^="https://calendly.com/lifecoachcode"]');
+      if (!a || !usable || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+      e.preventDefault();
+      open(a.closest('.hud') ? 'hud' : a.closest('#spot-panel') ? 'spot' : 'link');
+    });
+    // a booked call: thank them
+    window.addEventListener('message', (e) => {
+      if (e.origin !== 'https://calendly.com' || !e.data || e.data.event !== 'calendly.event_scheduled') return;
+      track('call_booked');
+      Sound.play('win');
+      toast('<i>✓</i> Your call is booked. We look forward to meeting you!', 9000);
+    });
+  }
+  return { init, open };
+})();
+
+/* =========================================================================
+   The Garden and Life Coach Code: everything there happens by walking up to it
+   ========================================================================= */
+const Spots = (() => {
+  const GD = window.FAIR_GARDEN || {};
+  const LC = window.FAIR_LCC || {};
+  const SOL = LC.solutions || [];
+  const panel = $('#sp-panel'), body = $('#sp-body');
+  const sheet = makeSheet('spot-panel');
+  const callBtn = (label = 'Book a free call', cls = 'btn btn--gold') => `<a class="${cls}" href="${esc(LINKS.discovery)}" target="_blank" rel="noopener" data-call>${esc(label)}</a>`;
+  let bq = null, lastFortune = -1, fortune = '';
+  function show(html, cls = '') {
+    body.innerHTML = html;
+    panel.className = `sheet__panel sp ${cls}`;
+    if (!sheet.isOpen()) sheet.open(); else panel.scrollTop = 0;
+  }
+
+  /* the Elixir Bar */
+  function bar() {
+    show(`<p class="eyebrow">The Garden</p><h2 class="sheet__title" id="sp-title">The Elixir Bar</h2>
+      <p class="sheet__lead">Everything here is on the house. What would you like?</p>
+      <div class="sp__drinks">${(GD.drinks || []).map((d) => `<button type="button" class="sp__drink" data-drink="${esc(d.id)}"><i aria-hidden="true">${d.icon}</i><b>${esc(d.name)}</b><small>${esc(d.note)}</small></button>`).join('')}</div>`, 'sp--bar');
+    track('bar_open');
+  }
+  function order(id) {
+    const d = (GD.drinks || []).find((x) => x.id === id);
+    if (!d) return;
+    sheet.close();
+    if (world) world.serveDrink(d.color || '#ffb36b');
+    Sound.play('pop');
+    toast(`<i>${d.icon}</i> Your <b>${esc(d.name)}</b> is on the bar. ${esc(d.note)}`, 8000);
+    track('drink', { id });
+  }
+
+  /* fortune cookies */
+  function cookie() {
+    const list = GD.fortunes || [];
+    if (!list.length) return;
+    let i = Math.floor(Math.random() * list.length);
+    if (i === lastFortune) i = (i + 1) % list.length;
+    lastFortune = i;
+    fortune = list[i];
+    show(`<p class="eyebrow">The Garden</p><h2 class="sheet__title" id="sp-title">Your fortune cookie</h2>
+      <div class="fc" data-fc><span class="fc__half fc__half--l" aria-hidden="true"></span><span class="fc__half fc__half--r" aria-hidden="true"></span><p class="fc__slip">${esc(fortune)}</p></div>
+      <div class="card__actions"><button class="btn btn--gold" type="button" data-cookie="again">Crack another</button><button class="btn btn--ghost" type="button" data-cookie="keep">Keep it</button></div>`, 'sp--cookie');
+    requestAnimationFrame(() => requestAnimationFrame(() => { const f = $('[data-fc]', body); if (f) f.classList.add('is-open'); }));
+    Sound.play('pop');
+    track('fortune');
+  }
+  function keepFortune() {
+    const c = K.makeFortuneCard({ text: fortune, name: People.myName(), logo: LOGO, lines: { footer: 'The Virtual Book Fair · Life Coach Code' } });
+    sheet.close();
+    Keepsake.show(c, { title: 'Your fortune', eyebrow: 'A fortune cookie from the Garden', filename: 'my-fortune.jpg', text: 'My fortune from the Garden at the Virtual Book Fair by Life Coach Code.' });
+  }
+
+  /* Should you write a book? */
+  function bookQuiz() { bq = { i: 0, picks: [] }; askBook(); track('bookquiz_open'); }
+  function askBook() {
+    const Q = GD.bookQuiz, n = Q.questions.length, q = Q.questions[bq.i];
+    show(`<p class="eyebrow">The Garden · question ${bq.i + 1} of ${n}</p><h2 class="sheet__title" id="sp-title">${esc(Q.title)}</h2>
+      <div class="bq__bar" aria-hidden="true"><span style="width:${(bq.i / n) * 100}%"></span></div>
+      <p class="bq__q">${esc(q.q)}</p>
+      <div class="bq__opts" role="group" aria-label="Answers">${q.options.map(([t], k) => `<button type="button" class="bq__opt" data-bq="${k}">${esc(t)}</button>`).join('')}</div>
+      ${bq.i ? '<button class="text-link bq__back" type="button" data-bq-back>&larr; Back</button>' : ''}`, 'sp--quiz');
+  }
+  function answerBook(k) {
+    const Q = GD.bookQuiz;
+    bq.picks[bq.i] = Q.questions[bq.i].options[k][1];
+    bq.i++;
+    if (bq.i < Q.questions.length) { askBook(); return; }
+    const score = bq.picks.reduce((a, b) => a + b, 0), max = Q.questions.length * 3;
+    const r = Q.results.find((x) => score >= x.min) || Q.results[Q.results.length - 1];
+    show(`<p class="eyebrow">The Garden · your answer</p><h2 class="sheet__title" id="sp-title">${esc(r.title)}</h2>
+      <div class="bq__meter" aria-label="${score} of ${max}"><span style="width:${Math.round((score / max) * 100)}%"></span><b>${r.call ? 'The signs' : 'Not yet'}</b></div>
+      <p class="sheet__lead">${esc(r.text)}</p>
+      <div class="card__actions">${r.call
+        ? `${callBtn('Schedule a free call with us')}<button class="btn btn--ghost" type="button" data-do="creator">Design your cover first</button>`
+        : `<button class="btn btn--gold" type="button" data-go="oracle">Find a book with the Oracle</button>${callBtn('Talk to us anyway', 'btn btn--ghost')}`}</div>
+      <button class="text-link" type="button" data-bq-again>Take it again</button>`, 'sp--quiz');
+    Sound.play(r.call ? 'win' : 'open');
+    track('bookquiz_result', { score, call: r.call });
+  }
+
+  /* the twelve solutions */
+  function solution(i) {
+    i = mod(i, SOL.length);
+    const s = SOL[i];
+    if (!s) return;
+    show(`<p class="eyebrow">${pad2(i + 1)} · ${esc(s.area)}${s.flagship ? ' · ★ Flagship' : ''}</p><h2 class="sheet__title" id="sp-title">${esc(s.title)}</h2>
+      <div class="sv__problem"><span>The real problem</span><p>${esc(s.problem)}</p></div>
+      <p class="sheet__lead">${esc(s.body)}</p>
+      <p class="sv__imagine">${esc(s.imagine)}</p>
+      <ul class="sv__feats">${(s.features || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+      <div class="card__actions">${callBtn(s.cta || 'Book a free call')}${s.more ? `<a class="btn btn--ghost" href="${esc(s.more.url)}" target="_blank" rel="noopener">${esc(s.more.label)}</a>` : ''}${s.join ? '<button class="btn btn--ghost" type="button" data-spot="lcc-join">Ways to join</button>' : ''}</div>
+      <nav class="sv__nav" aria-label="The solutions"><button type="button" class="icon-btn" data-sol="${i - 1}" aria-label="Previous solution">&lsaquo;</button><span>${i + 1} of ${SOL.length}</span><button type="button" class="icon-btn" data-sol="${i + 1}" aria-label="Next solution">&rsaquo;</button></nav>
+      <p class="sheet__fine">Every solution starts with the same simple first step: a free, no-pressure call.</p>`, 'sp--solution');
+    track('solution', { id: s.id });
+  }
+  // not sure where to start? one question, then the solutions that change the most
+  function finder() {
+    show(`<p class="eyebrow">Life Coach Code</p><h2 class="sheet__title" id="sp-title">Let’s find your <em>one next move</em></h2>
+      <p class="sheet__lead">${esc(LC.intro || '')}</p>
+      <p class="bq__q">What feels most true right now?</p>
+      <div class="bq__opts">${(LC.finder || []).map((f, k) => `<button type="button" class="bq__opt" data-find="${k}">${esc(f.label)}</button>`).join('')}</div>
+      <div class="sv__all">${SOL.map((x, k) => `<button type="button" class="chip" data-sol="${k}">${pad2(k + 1)} · ${esc(x.area)}</button>`).join('')}</div>
+      <div class="card__actions">${callBtn('Just book a free call')}</div>`, 'sp--solution');
+    track('finder_open');
+  }
+  function found(k) {
+    const f = (LC.finder || [])[k];
+    if (!f) return;
+    const picks = f.picks.map((id) => SOL.findIndex((x) => x.id === id)).filter((i) => i >= 0);
+    show(`<p class="eyebrow">Life Coach Code · ${esc(f.label)}</p><h2 class="sheet__title" id="sp-title">This is where we would <em>start</em></h2>
+      <ol class="sv__picks">${picks.map((i) => `<li><button type="button" data-sol="${i}"><i>${pad2(i + 1)}</i><span><b>${esc(SOL[i].area)}</b><small>${esc(SOL[i].title)}</small></span></button></li>`).join('')}</ol>
+      <p class="sheet__lead">In a free 30-minute call we map your next move together, and you leave with a plan whether we work together or not.</p>
+      <div class="card__actions">${callBtn('Book my free strategy call')}<button class="btn btn--ghost" type="button" data-finder>Choose again</button></div>`, 'sp--solution');
+    track('finder', { pick: f.label });
+  }
+
+  /* three ways to join as a coach */
+  function join() {
+    const ways = LC.join || [];
+    show(`<p class="eyebrow">Be part of it</p><h2 class="sheet__title" id="sp-title">Join Life Coach Code <em>as a coach</em></h2>
+      <p class="sheet__lead">Three ways in. Pick the one that fits you today: you can always do all three.</p>
+      <ol class="jn">${ways.map((w, i) => `<li><i>${i + 1}</i><div><b>${esc(w.title)}</b><p>${esc(w.text)}</p>
+        <div class="jn__acts"><a class="btn btn--gold btn--sm" href="${esc(w.url)}" target="_blank" rel="noopener" data-join="${esc(w.id)}">${esc(w.cta)}</a>${(w.links || []).map((l) => `<a class="text-link" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} &rarr;</a>`).join('')}</div>
+        ${w.id === 'author' && LC.articleSearch ? `<form class="jn__search" data-articles role="search"><input type="search" name="q" placeholder="Search articles by coaches&hellip;" aria-label="Search articles by coaches"><button class="btn btn--ghost btn--sm" type="submit">Search</button></form>
+          <div class="jn__topics">${(LC.articleTopics || []).map((t) => `<a class="chip" href="${esc(LC.articleSearch + encodeURIComponent(t))}" target="_blank" rel="noopener">${esc(t)}</a>`).join('')}</div>` : ''}
+      </div></li>`).join('')}</ol>
+      ${(LC.interviews || []).length ? `<h3 class="bi__h">Interviews with coaches from this fair</h3><ul class="jn__reads">${LC.interviews.map((r) => `<li><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)} &rarr;</a></li>`).join('')}</ul>` : ''}`, 'sp--join');
+    track('join_open');
+  }
+
+  /* words from coaches */
+  function words() {
+    show(`<p class="eyebrow">In their words</p><h2 class="sheet__title" id="sp-title">Coaches we’ve had the honour <em>to work with</em></h2>
+      <ul class="wd">${(LC.testimonials || []).map((t) => `<li><blockquote>${esc(t.quote)}</blockquote><cite><b>${esc(t.name)}</b> · ${esc(t.role || '')}</cite></li>`).join('')}</ul>
+      <div class="card__actions">${callBtn()}</div>`, 'sp--words');
+  }
+
+  /* what each thing in the Garden and at Life Coach Code does */
+  function act(info) {
+    switch (info.id) {
+      case 'bar': bar(); break;
+      case 'cookies': cookie(); break;
+      case 'pier': Lantern.open(); break;
+      case 'quiz': bookQuiz(); break;
+      case 'meditate':
+      case 'bench':
+        if (world && info.seat) world.sitAt(info.seat, info.look);
+        Sound.play('step');
+        if (info.id === 'meditate') setTimeout(() => Breathe.open(), reduceMotion ? 100 : 1300);
+        else setTimeout(() => toast('<i>✦</i> You sit down in the Garden. Everyone here can see you: wave hello.', 5000), 900);
+        track(info.id === 'bench' ? 'garden_sit' : 'meditate');
+        break;
+      case 'garden-gate': goPlace('garden'); break;
+      case 'lcc-gate': goPlace('lcc'); break;
+      case 'lcc-guide': if (Guide) Guide.lcc(); else finder(); break;
+      case 'lcc-join': join(); break;
+      case 'lcc-call': Call.open('kiosk'); break;
+      case 'lcc-words': words(); break;
+      default:
+    }
+  }
+  function init() {
+    panel.addEventListener('click', (e) => {
+      const d = e.target.closest('[data-drink]');
+      if (d) { order(d.getAttribute('data-drink')); return; }
+      const ck = e.target.closest('[data-cookie]');
+      if (ck) { if (ck.getAttribute('data-cookie') === 'again') cookie(); else keepFortune(); return; }
+      const o = e.target.closest('[data-bq]');
+      if (o) { answerBook(+o.getAttribute('data-bq')); return; }
+      if (e.target.closest('[data-bq-back]')) { bq.i = Math.max(0, bq.i - 1); askBook(); return; }
+      if (e.target.closest('[data-bq-again]')) { bookQuiz(); return; }
+      const so = e.target.closest('[data-sol]');
+      if (so) { solution(+so.getAttribute('data-sol')); return; }
+      const fi = e.target.closest('[data-find]');
+      if (fi) { found(+fi.getAttribute('data-find')); return; }
+      if (e.target.closest('[data-finder]')) { finder(); return; }
+      const sp = e.target.closest('[data-spot]');
+      if (sp) { act({ id: sp.getAttribute('data-spot') }); return; }
+      const j = e.target.closest('[data-join]');
+      if (j) track('join', { way: j.getAttribute('data-join') });
+      // anything that leads elsewhere in the fair (or to the call) closes this window first
+      if (e.target.closest('[data-do], [data-go], [data-call]')) sheet.close();
+    });
+    panel.addEventListener('submit', (e) => {
+      const f = e.target.closest('[data-articles]');
+      if (!f) return;
+      e.preventDefault();
+      const q = f.elements.q.value.trim();
+      if (q) window.open(LC.articleSearch + encodeURIComponent(q), '_blank', 'noopener');
+      track('article_search');
+    });
+    // walk to a place from any card ("data-go")
+    document.addEventListener('click', (e) => {
+      const g = e.target.closest('[data-go]');
+      if (!g) return;
+      if (cleanView.matches) Context.closeCard();
+      goPlace(g.getAttribute('data-go'));
+    });
+    const st = $('[data-lcc-stats]');
+    if (st) st.innerHTML = (LC.stats || []).map(([n, l]) => `<li><b>${esc(n)}</b><span>${esc(l)}</span></li>`).join('');
+  }
+  return { init, act, solution, finder, join, bookQuiz, label: (i) => SOL[i] };
 })();
 
 /* =========================================================================
@@ -2290,7 +2630,7 @@ const Lantern = (() => {
     sheet.close();
     track('lantern_release', { shared: People.lantern() });
     if (!world) { if (text) card(text); return; }
-    world.releaseLantern({ mine: true });
+    if (world.zone() === 'garden') world.releaseFromPier(); else world.releaseLantern({ mine: true });
     Sound.play('win');
     setTimeout(() => toast('<i>✦</i> Your lantern is rising over the fair. Look up.', 14000, text ? { label: 'Keep my words', fn: () => card(text) } : null), 600);
   }
@@ -2300,7 +2640,7 @@ const Lantern = (() => {
     if (Date.now() - lastToast < 15000) return;
     lastToast = Date.now();
     const who = peer.author ? peer.author.name : peer.name || 'A visitor';
-    toast(`<i>✦</i> ${esc(who)} released a wishing lantern`, 5000, { label: 'Release one too', fn: open });
+    toast(`<i>✦</i> ${esc(who)} released a wishing lantern`, 5000, { label: 'To the lantern pier', fn: () => goPlace('garden-pier') });
   }
   // the words of the last lantern can still be kept after the message has gone
   function open() { $('#lt-keep').hidden = !lastWords; sheet.open(); track('lantern_open'); }
@@ -2362,7 +2702,7 @@ const More = (() => {
   }
   function init() {
     btn.addEventListener('click', (e) => { e.stopPropagation(); set(menu.hidden); });
-    document.addEventListener('click', (e) => { if (!menu.hidden && !e.target.closest('#more, #more-btn')) set(false); });
+    document.addEventListener('click', (e) => { if (!menu.hidden && (!e.target.closest('#more, #more-btn') || e.target.closest('#more a'))) set(false); });
     menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { set(false); btn.focus(); } });
     document.addEventListener('click', (e) => {
       const d = e.target.closest('[data-do]');
@@ -2381,9 +2721,9 @@ const More = (() => {
 function initStats() {
   const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
     'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
-  const authors = new Set(BOOKS.map((b) => b.author)).size;
-  const soon = BOOKS.filter(isSoon).length;
-  const vals = { books: BOOKS.length, authors, soon, 'books-word': WORDS[BOOKS.length] || BOOKS.length };
+  const authors = new Set(HALL.map((b) => b.author)).size;
+  const soon = HALL.filter(isSoon).length;
+  const vals = { books: HALL.length, authors, soon, 'books-word': WORDS[HALL.length] || HALL.length };
   $$('[data-stat]').forEach((el) => {
     const k = el.dataset.stat;
     if (k in vals) el.textContent = vals[k];
@@ -2487,6 +2827,8 @@ async function boot() {
   More.init();
   Quality.init();
   Register.init();
+  Call.init();
+  Spots.init();
   Reminders.init();
   Between.init();
   Breathe.init();
@@ -2494,7 +2836,7 @@ async function boot() {
   const G = window.FAIR_GUIDE || {};
   if (G.enabled !== false) {
     Guide = createGuide({
-      data: { BOOKS, AUTHORS, EVENT, LINKS, STANDS: window.FAIR_STANDS || {}, CFG: G },
+      data: { BOOKS, AUTHORS, EVENT, LINKS, STANDS: window.FAIR_STANDS || {}, CFG: G, LCC: window.FAIR_LCC || {}, GARDEN: window.FAIR_GARDEN || {} },
       eventInfo: EventInfo,
       store,
       track,
@@ -2512,8 +2854,13 @@ async function boot() {
         register: () => Register.open('guide'),
         remind: (id) => Reminders.setFor(id),
         canRemind: (id) => Reminders.canFor(id),
-        breathe: () => Breathe.open(),
-        lantern: () => Lantern.open(),
+        breathe: () => goPlace('garden-meditation'),
+        lantern: () => goPlace('garden-pier'),
+        call: () => Call.open('guide'),
+        solutions: () => Spots.finder(),
+        solution: (id) => { const i = (window.FAIR_LCC.solutions || []).findIndex((x) => x.id === id); if (i >= 0) Spots.solution(i); else Spots.finder(); },
+        join: () => Spots.join(),
+        bookquiz: () => goPlace('garden-quiz'),
         quiz: () => doAction('quiz'),
         between: () => Between.open()
       }
@@ -2563,6 +2910,8 @@ async function boot() {
       onNear: (info) => Prompt.set(info),
       onMoved: () => Hints.moved(),
       quality: Quality.mode(),
+      lcc: window.FAIR_LCC,
+      garden: window.FAIR_GARDEN,
       onQuality: Quality.show
     });
     setLoad(1);

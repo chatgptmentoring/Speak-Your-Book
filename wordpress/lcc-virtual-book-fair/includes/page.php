@@ -80,8 +80,8 @@ function lcc_vbf_render_page() {
 
 	// the event as set in Settings > Virtual Book Fair, for search engines too
 	$start = lcc_vbf_start_iso();
-	if ($start && $data['event']['date']) {
-		$html = str_replace('"startDate": "' . $data['event']['date'] . '"', '"startDate": "' . $start . '"', $html);
+	if ($start) {
+		$html = preg_replace('/"startDate": "[^"]*"/', '"startDate": "' . $start . '"', $html, 1);
 	}
 	if ($o['register'] && $data['event']['register']) {
 		$html = str_replace($data['event']['register'], esc_url_raw($o['register']), $html);
@@ -143,6 +143,7 @@ function lcc_vbf_config_script() {
 		'inboxes'  => $inbox ? $inbox : new stdClass(),
 		'fallback' => is_email($o['fallback_inbox']) ? base64_encode($o['fallback_inbox']) : '',
 		'live'     => $o['live'] ? 1 : 0,
+		'count'    => $o['show_count'] ? 1 : 0,
 		'ga'       => preg_match('/^G-[A-Z0-9]{4,20}$/', $o['ga']) ? 1 : 0,
 	);
 	$json = wp_json_encode($config, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
@@ -159,6 +160,7 @@ function lcc_vbf_config_script() {
     window.FAIR_GUIDE.endpoint = o.guide;
     window.FAIR_LIVE = window.FAIR_LIVE || {};
     window.FAIR_LIVE.enabled = !!o.live;
+    window.FAIR_LIVE.showCount = !!o.count;
     window.FAIR_CONTACT = window.FAIR_CONTACT || {};
     window.FAIR_CONTACT.fallbackInbox = o.fallback ? atob(o.fallback) : '';
     (window.FAIR_AUTHORS || []).forEach(function (a) { a.inbox = o.inboxes[a.id] ? atob(o.inboxes[a.id]) : ''; });

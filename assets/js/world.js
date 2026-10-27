@@ -15,6 +15,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import * as T from './textures.js';
 import { createProps } from './props.js';
 import { createSky } from './sky.js';
+import { createAreas, merge } from './areas.js';
 
 // A highlight brighter than a half-float buffer can hold turns into Inf (or NaN), and bloom then
 // spreads it across the screen as a black frame. Keep every lit surface finite and within range.
@@ -172,10 +173,32 @@ export async function createWorld(opts) {
     poster: lowEnd ? 448 : 768,
     dust: lowEnd ? 700 : 1600
   };
-  // the hall grows with the number of books: the stage and the temple always sit past the last booth
-  const LAST_BOOTH_Z = BOOTH_Z0 - (books.length - 1) * BOOTH_STRIDE;
+  // Books that share a booth (book.booth) stand side by side before one wall, under one name.
+  // Books published by Life Coach Code itself (book.sponsored) stand in its pavilion instead.
+  const hallStands = [];
+  books.filter((b) => !b.sponsored).forEach((b) => {
+    const key = b.booth || b.slug;
+    let st = hallStands.find((x) => x.key === key);
+    if (!st) { st = { key, books: [], k: hallStands.length }; hallStands.push(st); }
+    st.books.push(b);
+  });
+  const lccStand = { key: 'lcc', books: books.filter((b) => b.sponsored), lcc: true };
+  // the hall grows with the number of booths: the stage and the temple always sit past the last one
+  const LAST_BOOTH_Z = BOOTH_Z0 - (hallStands.length - 1) * BOOTH_STRIDE;
   const STAGE_Z = Math.min(-76, LAST_BOOTH_Z - 12);
   const TEMPLE_Z = STAGE_Z - 15;
+  // Two paths branch off the hall just past the entrance, each over a bridge to a floating island:
+  // left to the Garden (hang out, drinks, fortune cookies, lanterns, meditation), right to
+  // Life Coach Code (its solutions, joining as a coach, its own booth and guide).
+  const PATH_Z = -1.0, ISLAND_X = 28, ISLAND_R = 7.6, BRIDGE_X0 = 13.4, BRIDGE_X1 = ISLAND_X - ISLAND_R + 0.6;
+  const GARDEN_C = new V3(-ISLAND_X, 0, PATH_Z), LCC_C = new V3(ISLAND_X, 0, PATH_Z);
+  const onIsland = (c, a, r) => new V3(c.x + Math.cos(a) * r, 0, c.z + Math.sin(a) * r);
+  // the Life Coach Code booth stands near the pavilion's gate, facing its centre
+  const LCC_BOOTH = (() => {
+    const pos = onIsland(LCC_C, THREE.MathUtils.degToRad(180 + 68), 5.0);
+    const d = LCC_C.clone().sub(pos);
+    return { pos, rotY: Math.atan2(d.x, d.z) };
+  })();
 
   /* ---------- renderer, scene, camera ---------- */
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false, stencil: false });
@@ -614,35 +637,35 @@ export async function createWorld(opts) {
     return g;
   }
 
-  /* ---------- colonnade along the hall ---------- */
-  const bannerSets = [['Virtual', 'Book', 'Fair'], ['Speak', 'Your', 'Book'], ['Life', 'Coach', 'Code']];
-  const bannerTex = bannerSets.map((w) => T.bannerTexture(w));
-  const COLS = Math.ceil((-6 - STAGE_Z) / 10) + 1;
-  for (let i = 0; i < COLS; i++) {
-    const z = -6 - i * 10;
-    [-1, 1].forEach((side) => {
-      const x = side * 7.6;
-      const c = new THREE.Mesh(colGeo, mat.marble);
-      c.position.set(x, 0, z);
-      scene.add(c);
-      if (i < COLS - 1) {
-        const arc = new THREE.Mesh(new THREE.TorusGeometry(5, 0.24, 12, 48, Math.PI), mat.marble);
-        arc.rotation.y = Math.PI / 2;
-        arc.position.set(x, 6.5, z - 5);
-        scene.add(arc);
-        const banner = new THREE.Mesh(
-          new THREE.PlaneGeometry(1.25, 3.75),
-          new THREE.MeshStandardMaterial({ map: bannerTex[(i + (side > 0 ? 1 : 0)) % 3], transparent: true, alphaTest: 0.5, roughness: 0.9, side: THREE.DoubleSide, emissive: 0xffffff, emissiveIntensity: 0.12 })
-        );
-        banner.material.emissiveMap = banner.material.map;
-        banner.position.set(side * 7.45, 7.1, z - 5);
-        banner.rotation.y = -side * Math.PI / 2;
-        scene.add(banner);
-        addFairy(catenary(new V3(x, 6.3, z), new V3(x, 6.3, z - 10), 1.1, 30));
-      }
-      if (i % 2 === 0 && i < COLS - 1) {
-        addFairy(catenary(new V3(-7.6, 6.4, z), new V3(7.6, 6.4, z), 1.6, 46));
-      }
+  /* ---------- colonnade along the hall: merged into a handful of meshes, a few draw calls in all ---------- */
+  {
+    const bannerSets = [['Virtual', 'Book', 'Fair'], ['Speak', 'Your', 'Book'], ['Life', 'Coach', 'Code']];
+    const bannerTex = bannerSets.map((w) => T.bannerTexture(w));
+    const COLS = Math.ceil((-6 - STAGE_Z) / 10) + 1;
+    const cols = [], arcs = [], banners = [[], [], []];
+    const m = new THREE.Object3D();
+    const placed = (geo, x, y, z, ry = 0) => { m.position.set(x, y, z); m.rotation.set(0, ry, 0); m.updateMatrix(); return geo.clone().applyMatrix4(m.matrix); };
+    const arcGeo = new THREE.TorusGeometry(5, 0.24, 12, 48, Math.PI);
+    const bannerGeo = new THREE.PlaneGeometry(1.25, 3.75);
+    for (let i = 0; i < COLS; i++) {
+      const z = -6 - i * 10;
+      [-1, 1].forEach((side) => {
+        const x = side * 7.6;
+        cols.push(placed(colGeo, x, 0, z));
+        if (i < COLS - 1) {
+          arcs.push(placed(arcGeo, x, 6.5, z - 5, Math.PI / 2));
+          banners[(i + (side > 0 ? 1 : 0)) % 3].push(placed(bannerGeo, side * 7.45, 7.1, z - 5, -side * Math.PI / 2));
+          addFairy(catenary(new V3(x, 6.3, z), new V3(x, 6.3, z - 10), 1.1, 30));
+        }
+        if (i % 2 === 0 && i < COLS - 1 && side < 0) addFairy(catenary(new V3(-7.6, 6.4, z), new V3(7.6, 6.4, z), 1.6, 46));
+      });
+    }
+    scene.add(new THREE.Mesh(merge(cols), mat.marble), new THREE.Mesh(merge(arcs), mat.marble));
+    banners.forEach((list, k) => {
+      if (!list.length) return;
+      const bm = new THREE.MeshStandardMaterial({ map: bannerTex[k], transparent: true, alphaTest: 0.5, roughness: 0.9, side: THREE.DoubleSide, emissive: 0xffffff, emissiveIntensity: 0.12 });
+      bm.emissiveMap = bm.map;
+      scene.add(new THREE.Mesh(merge(list), bm));
     });
   }
 
@@ -811,13 +834,61 @@ export async function createWorld(opts) {
     return h;
   }
 
-  const booths = books.map((book, k) => {
-    const side = k % 2 === 0 ? -1 : 1;
-    const z = BOOTH_Z0 - k * BOOTH_STRIDE;
+  // where a booth stands: the hall alternates sides; a booth of several books faces the aisle square on
+  const MEMBER_GAP = 3.25;
+  function standFrame(st) {
+    if (st.lcc) return { pos: LCC_BOOTH.pos.clone(), rotY: LCC_BOOTH.rotY };
+    const side = st.k % 2 === 0 ? -1 : 1;
+    const dir = st.books.length > 1 ? new V3(-side, 0, 0) : new V3(-side, 0, 0.38).normalize();
+    return { pos: new V3(side * BOOTH_X, 0, BOOTH_Z0 - st.k * BOOTH_STRIDE), rotY: Math.atan2(dir.x, dir.z) };
+  }
+  const booths = [];
+  [...hallStands, ...(lccStand.books.length ? [lccStand] : [])].forEach((st) => {
+    const fr = standFrame(st);
+    const xAxis = new V3(1, 0, 0).applyAxisAngle(new V3(0, 1, 0), fr.rotY);
+    const n = st.books.length;
+    st.books.forEach((book, j) => {
+      const at = fr.pos.clone().addScaledVector(xAxis, (j - (n - 1) / 2) * MEMBER_GAP);
+      booths.push(buildBooth(book, st, at, fr.rotY, j));
+    });
+    if (n > 1) buildStandWall(st, fr, n);
+  });
+
+  // one long wall and one name above the books of a shared booth
+  function buildStandWall(st, fr, n) {
+    const g = new THREE.Group();
+    g.position.copy(fr.pos);
+    g.rotation.y = fr.rotY;
+    const x0 = -((n - 1) / 2) * MEMBER_GAP - 1.55, x1 = ((n - 1) / 2) * MEMBER_GAP + 2.15;
+    const w = x1 - x0, cx = (x0 + x1) / 2;
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(w, 3.3, 0.06), mat.velvet);
+    wall.position.set(cx, 1.65, -1.05);
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, w, 12), mat.gold);
+    rod.rotation.z = Math.PI / 2;
+    rod.position.set(cx, 3.32, -1.0);
+    const a = st.books[0];
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(w - 0.6, 5.6), Math.min(w - 0.6, 5.6) / 4), new THREE.MeshBasicMaterial({
+      map: T.signTexture(st.lcc
+        ? { eyebrow: 'FROM LIFE COACH CODE', title: 'Books by ' + (a.displayAuthor || a.author), sub: 'For coaches who want to be seen', w: 1600, h: 400 }
+        : { eyebrow: `BOOTH ${String(st.k + 1).padStart(2, '0')}  ·  ${n} BOOKS`, title: a.displayAuthor || a.author, w: 1600, h: 400 }),
+      transparent: true
+    }));
+    sign.position.set(cx, 3.86, -0.98);
+    g.add(wall, rod, sign);
+    scene.add(g);
+    g.updateMatrixWorld(true);
+    for (let x = x0 + 0.3; x < x1; x += 0.7) {
+      const p = g.localToWorld(new V3(x, 0, -1.0));
+      colliders.push({ x: p.x, z: p.z, r: 0.36 });
+    }
+    st.wall = g;
+  }
+
+  function buildBooth(book, st, at, rotY, j) {
+    const k = books.indexOf(book);
     const group = new THREE.Group();
-    group.position.set(side * BOOTH_X, 0, z);
-    const dir = new V3(-side, 0, 0.38).normalize();
-    group.rotation.y = Math.atan2(dir.x, dir.z);
+    group.position.copy(at);
+    group.rotation.y = rotY;
     const img = images[k];
     const coverTex = img ? imageTexture(img) : null;
     const soon = book.status === 'coming-soon';
@@ -827,7 +898,7 @@ export async function createWorld(opts) {
     const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.1, 12), mat.gold);
     rod.rotation.z = Math.PI / 2;
     rod.position.set(0, 3.12, -0.93);
-    const posterTex = img ? T.posterTexture(img, book, k, books.length, Q.poster) : null;
+    const posterTex = img ? T.posterTexture(img, book, st.lcc ? -1 : st.k, hallStands.length, Q.poster) : null;
     const poster = new THREE.Mesh(posterGeo, new THREE.MeshStandardMaterial({ map: posterTex, emissive: 0xffffff, emissiveMap: posterTex, emissiveIntensity: 0.5, roughness: 0.75 }));
     poster.position.set(0, 1.78, -0.92);
     const frame = new THREE.Mesh(frameGeo, mat.gold);
@@ -856,7 +927,10 @@ export async function createWorld(opts) {
     stand.position.set(0, 1.32, -0.12);
     stand.rotation.x = -0.34;
 
-    group.add(back, rod, poster, frame, ped, trim, baseTrim, plate, pool, cone, stand, holder);
+    // the small things only matter up close: from afar the wall, the poster and the pedestal are enough
+    const detail = new THREE.Group();
+    detail.add(rod, trim, baseTrim, plate, pool, cone, stand, holder);
+    group.add(back, poster, frame, ped, detail);
 
     if (soon) {
       const ropeMat = mat.velvetRed;
@@ -867,10 +941,10 @@ export async function createWorld(opts) {
         top.position.set(x, 0.97, 0.78);
         const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.03, 24), mat.gold);
         foot.position.set(x, 0.015, 0.78);
-        group.add(post, top, foot);
+        detail.add(post, top, foot);
       });
       const curve = new THREE.CatmullRomCurve3(catenary(new V3(-0.6, 0.9, 0.78), new V3(0.6, 0.9, 0.78), 0.22, 16));
-      group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.022, 10, false), ropeMat));
+      detail.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.022, 10, false), ropeMat));
     }
 
     scene.add(group);
@@ -882,7 +956,7 @@ export async function createWorld(opts) {
     const presentPos = new V3(0, 1.82, 0.72);
 
     const booth = {
-      book, k, side, group, holder, bk, coverTex, restPos, restQuat: new THREE.Quaternion().setFromEuler(restRot),
+      book, k, group, detail, holder, bk, coverTex, restPos, restQuat: new THREE.Quaternion().setFromEuler(restRot),
       presentPos, present: 0, hover: 0, phase: Math.random() * 6.28, hdLoaded: false, pagesReady: false
     };
     const info = { kind: 'book', slug: book.slug };
@@ -900,7 +974,8 @@ export async function createWorld(opts) {
     });
     booth.prop = prop;
     animated.push((t, dt) => { if (booth.awake) prop.update(t, dt); });
-    const author = authorOf[book.slug];
+    // a booth of several books has one portrait of its author, at the start
+    const author = j === 0 && !st.lcc ? authorOf[book.slug] : null;
     if (author) {
       const holo = buildHolo(author, book);
       const HOLO_AT = new V3(-1.32, 0, 0.3);
@@ -919,9 +994,10 @@ export async function createWorld(opts) {
     });
     group.updateMatrixWorld(true);
     const ip = group.localToWorld(new V3(0, 0, 0.4));
-    interactables.push({ pos: ip, range: 4.6, info, booth });
+    interactables.push({ pos: ip, range: st.books.length > 1 ? 2.6 : 4.6, info, booth });
+    booth.stand = st;
     return booth;
-  });
+  }
 
   function boothWorld(b, local) { return b.group.localToWorld(local.clone()); }
   function boothDir(b) { return new V3(0, 0, 1).applyQuaternion(b.group.quaternion); }
@@ -1322,6 +1398,16 @@ export async function createWorld(opts) {
     customBook.holder.rotation.y = Math.sin(t * 0.45) * 0.08;
   });
 
+  /* ---------- the Garden and Life Coach Code, down the two paths off the hall ---------- */
+  const areas = createAreas({
+    scene, mat, tex, poolMat, pointsMaterial, pointMats, addFairy, catenary, coneMaterial, holoGeo, holoMaterial, holoMats, logoImg, logoTex, lowEnd, camera,
+    layout: { GARDEN_C, LCC_C, R: ISLAND_R, PATH_Z, BRIDGE_X0, BRIDGE_X1 },
+    data: { LCC: opts.lcc, GARDEN: opts.garden }
+  });
+  colliders.push(...areas.colliders);
+  interactables.push(...areas.interactables);
+  clickables.push(...areas.clickables);
+
   /* ---------- fairy lights + dust ---------- */
   {
     const fg = new THREE.BufferGeometry();
@@ -1476,6 +1562,7 @@ export async function createWorld(opts) {
   addPlace('speak', 'Speak Your Book', new V3(0, 0, STAGE_Z + 10.6), new V3(0, 2.6, STAGE_Z - 2), { shift: 0.35 });
   addPlace('about', 'Life Coach Code', new V3(0, 0, TEMPLE_Z + 9.6), new V3(0, 2.9, TEMPLE_Z));
   addPlace('finale', 'Your book here', new V3(0, 0, TEMPLE_Z + 5.2), new V3(0, 1.5, TEMPLE_Z + 1.6));
+  areas.places.forEach((pl) => places.push({ ...pl }));
 
   /* ---------- player ---------- */
   const EYE = 1.65;
@@ -1510,10 +1597,21 @@ export async function createWorld(opts) {
         p.z = c.z + (dz / d) * min;
       }
     }
-    p.z = Math.max(TEMPLE_Z + 1.0, Math.min(26, p.z));
-    const half = p.z < 0.4 ? 6.8 : 13;
-    p.x = Math.max(-half, Math.min(half, p.x));
+    // where you can walk: the hall, the path across it, the bridges and the islands
+    let bx = p.x, bz = p.z, bd = Infinity;
+    for (let i = 0; i < walkRegions.length; i++) {
+      const [x, z] = walkRegions[i](p.x, p.z);
+      const d = (x - p.x) * (x - p.x) + (z - p.z) * (z - p.z);
+      if (d < bd) { bd = d; bx = x; bz = z; if (d === 0) break; }
+    }
+    p.x = bx;
+    p.z = bz;
   }
+  const walkRegions = [
+    (x, z) => { const zz = Math.max(TEMPLE_Z + 1.0, Math.min(26, z)); const half = zz < 0.4 ? 6.8 : 13; return [Math.max(-half, Math.min(half, x)), zz]; },
+    (x, z) => [Math.max(-BRIDGE_X0, Math.min(BRIDGE_X0, x)), Math.max(PATH_Z - 1.1, Math.min(PATH_Z + 1.1, z))],
+    ...areas.regions
+  ];
 
   // keep the subject beside the info card (desktop) or below it (phones)
   function framedLook(place, eye) {
@@ -1544,6 +1642,7 @@ export async function createWorld(opts) {
       player.pitch = player.pitchT = yp.pitch;
       travel = null;
       wakeBooths(true);
+      spotSnap = true;
       return;
     }
     let dy = yp.yaw - player.yaw;
@@ -1551,7 +1650,8 @@ export async function createWorld(opts) {
     const dist = player.pos.distanceTo(place.pos);
     travel = {
       from: player.pos.clone(), to: place.pos.clone(),
-      ctrl: new V3(0, 0, (player.pos.z + place.pos.z) / 2),
+      // through the aisle; to and from the islands, along the path across the hall
+      ctrl: Math.abs(player.pos.x) > 9 || Math.abs(place.pos.x) > 9 ? new V3(0, 0, PATH_Z) : new V3(0, 0, (player.pos.z + place.pos.z) / 2),
       yaw0: player.yaw, yaw1: player.yaw + dy, pitch0: player.pitch, pitch1: yp.pitch,
       t: 0, dur: reduceMotion ? 0.01 : Math.min(4.2, Math.max(place.minDur || 1.3, dist / 11)), lift: Math.min(2.2, dist * 0.04), seat: place.seat
     };
@@ -1672,14 +1772,16 @@ export async function createWorld(opts) {
       const c = b.group.position;
       const dx = c.x - p.x, dz = c.z - p.z;
       const d = Math.hypot(dx, dz);
-      if (d > 5.4) return;
+      if (d > (b.stand.lcc ? 3.4 : 5.4)) return;
       const facing = (dx * fwd.x + dz * fwd.z) / (d || 1);
       if (facing < 0.05 && d > 3) return;
       const s = d - facing * 1.6;
       if (s < bzScore) { bzScore = s; bz = b; }
     });
-    if (player.seated) z = 'event';
+    const area = areas.zoneOf(p);
+    if (player.seated && !area) z = 'event';
     else if (bz) z = 'book-' + bz.book.slug;
+    else if (area) z = area;
     else if (p.distanceTo(ORACLE_POS) < 4.6) z = 'oracle';
     else if (p.z > 0.6) z = 'welcome';
     else if (p.z > -6.5) z = 'hall';
@@ -1869,13 +1971,17 @@ export async function createWorld(opts) {
     return best;
   }
 
+  let spotSnap = true;
   function updateSpot(dt) {
     const b = focus || nearestBoothTo(player.pos);
     if (b) {
       const tp = boothWorld(b, new V3(0, 4.7, 2.1));
       const tt = boothWorld(b, focus ? b.presentPos : new V3(0, 1.35, 0));
-      spotPos.lerp(tp, 1 - Math.exp(-dt * 4));
-      spotTarget.lerp(tt, 1 - Math.exp(-dt * 4));
+      // after a jump the light is simply there; walking, it glides from booth to booth
+      const k = spotSnap ? 1 : 1 - Math.exp(-dt * 4);
+      spotSnap = false;
+      spotPos.lerp(tp, k);
+      spotTarget.lerp(tt, k);
       spot.intensity = damp(spot.intensity, focus ? 18 : 26, 3, dt);
     } else {
       spot.intensity = damp(spot.intensity, 0, 3, dt);
@@ -1950,8 +2056,9 @@ export async function createWorld(opts) {
     booths.forEach((b) => {
       const d = b.group.position.distanceTo(p);
       b.awake = d < 26;
-      b.prop.group.visible = d < 34;
-      if (b.holo) b.holo.group.visible = d < 34;
+      b.detail.visible = d < 24 || b === focus;
+      b.prop.group.visible = d < 31;
+      if (b.holo) b.holo.group.visible = d < 31;
       if (d < 7 && !lowEnd) loadHD(b);
     });
   }
@@ -2017,7 +2124,7 @@ export async function createWorld(opts) {
   }
   function checkPerf(gapMs, aim) {
     // only judged while it is meant to run at full speed, and never in the first seconds
-    if (qMode !== 'auto' || introT < 1 || aim > 17.5 || gapMs > 1000) { perf.t = perf.n = 0; return; }
+    if (qMode !== 'auto' || introT < 1 || aim > 17.5 || gapMs > 1000 || gapMs <= 0) { perf.t = perf.n = 0; return; }
     perf.n++;
     perf.t += gapMs / 1000;
     if (perf.t < 4) return;
@@ -2032,13 +2139,15 @@ export async function createWorld(opts) {
     if (!running) return;
     const aim = frameGap(now);
     if (now - lastRender < aim - 2) { requestAnimationFrame(frame); return; }
-    const gapMs = lastRender ? now - lastRender : 16.7;
-    lastRender = now;
-    const dt = Math.min(0.07, (now - last) / 1000);
-    last = now;
+    // A frame after a long task can carry a timestamp from before the last one: never let time run
+    // backwards (a negative step made every smoothed value overshoot: a blinding spotlight, glare, flicker)
+    const gapMs = lastRender ? Math.max(0, now - lastRender) : 16.7;
+    lastRender = Math.max(lastRender, now);
+    const dt = Math.max(0, Math.min(0.07, (now - last) / 1000));
+    last = Math.max(last, now);
     elapsed += dt;
-    const wall = Math.min(0.25, (now - (lastWall || now)) / 1000);
-    lastWall = now;
+    const wall = Math.max(0, Math.min(0.25, (now - (lastWall || now)) / 1000));
+    lastWall = Math.max(lastWall, now);
     if (introStarted && introT < 1) introT = Math.min(1, introT + wall / 4.2);
     wallDt = wall;
     updatePlayer(dt);
@@ -2047,6 +2156,7 @@ export async function createWorld(opts) {
     updateBooths(dt, elapsed);
     updateSpot(dt);
     updateLanterns(elapsed);
+    areas.update(elapsed, dt, camera.position);
     sky.update(elapsed, camera);
     grade.uniforms.uTime.value = elapsed;
     wakeBooths();
@@ -2112,6 +2222,8 @@ export async function createWorld(opts) {
     const hit = ray.intersectObjects(clickables, false)[0];
     if (!hit || hit.distance > 18) return null;
     if (hit.object.userData.instanced === 'seat') return { kind: 'seat', index: hit.instanceId };
+    // the twelve solutions are one mesh: four triangles a panel, front and back
+    if (hit.object.userData.solutions) return { kind: 'solution', index: Math.floor(hit.faceIndex / 4) };
     return hit.object.userData.info || null;
   }
   function pickPage(clientX, clientY) {
@@ -2238,6 +2350,10 @@ export async function createWorld(opts) {
     setCustomBook,
     setScreens(data) { SIGNS.screens = data; drawScreens(); },
     releaseLantern,
+    // the Garden: a drink on the bar for you, a lantern from the pier, a seat on a bench or a cushion
+    serveDrink(color) { areas.serveDrink(color, player.pos); },
+    releaseFromPier() { const p = areas.pierEnd; releaseLantern({ x: p.x - 0.6, z: p.z, mine: true }); },
+    sitAt(pos, look) { lastInput = performance.now(); travelTo({ id: 'seat', pos: new V3(pos.x, 0, pos.z), look: new V3(look.x, look.y, look.z), seat: true, minDur: 0.8 }); },
     capture: () => new Promise((res) => { captureWaiters.push(res); }),
     playerState: () => ({ x: +player.pos.x.toFixed(2), z: +player.pos.z.toFixed(2), yaw: +player.yaw.toFixed(2), seated: player.seated }),
     listener() {
