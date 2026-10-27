@@ -17,12 +17,26 @@ import { createProps } from './props.js';
 import { createSky } from './sky.js';
 import { createAreas, merge } from './areas.js';
 
-// A highlight brighter than a half-float buffer can hold turns into Inf (or NaN), and bloom then
-// spreads it across the screen as a black frame. Keep every lit surface finite and within range.
+// With multisampling on, a pixel that the edge of a thin or edge-on triangle only grazes is still
+// shaded at its centre, which can lie outside the triangle: normals, positions and UVs read there are
+// extrapolated and run wild, and the colour comes out NaN. That showed as black dashes ringed with
+// white glow (the floor edge of every booth's light cone). Centroid interpolation reads every value
+// inside the triangle instead.
+const centroid = (src) => src.replace(/(^|[^\w])varying\s/g, '$1centroid varying ');
+for (const k of Object.keys(THREE.ShaderChunk)) THREE.ShaderChunk[k] = centroid(THREE.ShaderChunk[k]);
+for (const s of Object.values(THREE.ShaderLib)) {
+  s.vertexShader = centroid(s.vertexShader);
+  s.fragmentShader = centroid(s.fragmentShader);
+}
+// Drops a colour that is not a finite number. It tests the bits: drivers may compile isnan() away.
+const finite = (v) => `${v} = all( lessThan( floatBitsToUint( ${v} ) & 0x7f800000u, uvec4( 0x7f800000u ) ) ) ? ${v} : vec4( 0.0 );`;
+// A highlight brighter than a half-float buffer can hold turns into Inf, and bloom then spreads it
+// across the screen. Cap every lit surface, and as a last guard (after fog) drop anything not finite.
 THREE.ShaderChunk.opaque_fragment = THREE.ShaderChunk.opaque_fragment.replace(
   'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
-  'outgoingLight = ( any( isnan( outgoingLight ) ) || any( isinf( outgoingLight ) ) ) ? vec3( 0.0 ) : min( outgoingLight, vec3( 512.0 ) );\ngl_FragColor = vec4( outgoingLight, diffuseColor.a );'
+  'gl_FragColor = vec4( min( outgoingLight, vec3( 512.0 ) ), diffuseColor.a );'
 );
+THREE.ShaderChunk.fog_fragment += `\n${finite('gl_FragColor')}\n`;
 
 const V3 = THREE.Vector3;
 const BOOK_W = 0.5;
@@ -48,7 +62,8 @@ const PILLARS = [
 const coneMaterial = (color, opacity) => new THREE.ShaderMaterial({
   uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: opacity } },
   vertexShader: 'varying vec2 vUv;varying vec3 vN;varying vec3 vV;void main(){vUv=uv;vec4 mv=modelViewMatrix*vec4(position,1.0);vV=-mv.xyz;vN=normalMatrix*normal;gl_Position=projectionMatrix*mv;}',
-  fragmentShader: 'uniform vec3 uColor;uniform float uOpacity;varying vec2 vUv;varying vec3 vN;varying vec3 vV;void main(){float f=abs(dot(normalize(vN),normalize(vV)));float a=pow(vUv.y,1.6)*pow(f,2.0)*uOpacity;gl_FragColor=vec4(uColor,a);}',
+  // pow() of a negative number is NaN: keep both bases at or above zero
+  fragmentShader: 'uniform vec3 uColor;uniform float uOpacity;varying vec2 vUv;varying vec3 vN;varying vec3 vV;void main(){float f=min(abs(dot(normalize(vN),normalize(vV))),1.0);float a=pow(clamp(vUv.y,0.0,1.0),1.6)*pow(f,2.0)*uOpacity;gl_FragColor=vec4(uColor,a);}',
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
 });
 
@@ -230,10 +245,11 @@ export async function createWorld(opts) {
   composer.setSize(window.innerWidth, window.innerHeight);
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.75, 0.6, 1.0);
-  // a tiny, very bright highlight would flare (and flicker as it moves): cap what feeds the glow
+  // a tiny, very bright highlight would flare (and flicker as it moves): cap what feeds the glow,
+  // and never let a stray non-finite pixel bloom into a white halo
   bloom.materialHighPassFilter.fragmentShader = bloom.materialHighPassFilter.fragmentShader.replace(
     'vec4 texel = texture2D( tDiffuse, vUv );',
-    'vec4 texel = texture2D( tDiffuse, vUv );\ntexel.rgb = min( texel.rgb, vec3( 6.0 ) );'
+    `vec4 texel = texture2D( tDiffuse, vUv );\n${finite('texel')}\ntexel.rgb = min( texel.rgb, vec3( 6.0 ) );`
   );
   bloom.materialHighPassFilter.needsUpdate = true;
   composer.addPass(bloom);
@@ -1020,7 +1036,7 @@ export async function createWorld(opts) {
     const ballMat = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 } },
       vertexShader: 'varying vec3 vN;varying vec3 vV;varying vec3 vP;void main(){vP=position;vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
-      fragmentShader: 'uniform float uTime;varying vec3 vN;varying vec3 vV;varying vec3 vP;void main(){float f=1.0-abs(dot(vN,vV));float s=sin(vP.x*18.0+uTime*1.3+sin(vP.y*14.0-uTime*0.9)*2.0)*0.5+0.5;vec3 c=mix(vec3(0.32,0.16,0.85),vec3(1.0,0.72,0.38),s);c*=0.55+1.6*pow(f,2.2)+0.5*s;gl_FragColor=vec4(c*1.3,1.0);}'
+      fragmentShader: 'uniform float uTime;varying vec3 vN;varying vec3 vV;varying vec3 vP;void main(){float f=clamp(1.0-abs(dot(vN,vV)),0.0,1.0);float s=sin(vP.x*18.0+uTime*1.3+sin(vP.y*14.0-uTime*0.9)*2.0)*0.5+0.5;vec3 c=mix(vec3(0.32,0.16,0.85),vec3(1.0,0.72,0.38),s);c*=0.55+1.6*pow(f,2.2)+0.5*s;gl_FragColor=vec4(c*1.3,1.0);}'
     });
     const ball = new THREE.Mesh(new THREE.SphereGeometry(0.21, 48, 32), ballMat);
     ball.position.y = 1.12;
@@ -1304,7 +1320,7 @@ export async function createWorld(opts) {
     const ghostMat = new THREE.ShaderMaterial({
       uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(1.0, 0.78, 0.45).multiplyScalar(1.6) } },
       vertexShader: 'varying vec3 vN;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
-      fragmentShader: 'uniform float uTime;uniform vec3 uColor;varying vec3 vN;varying vec3 vV;void main(){float f=1.0-abs(dot(vN,vV));float a=0.1+0.6*pow(f,1.5)+0.06*sin(uTime*2.0);gl_FragColor=vec4(uColor,a);}',
+      fragmentShader: 'uniform float uTime;uniform vec3 uColor;varying vec3 vN;varying vec3 vV;void main(){float f=clamp(1.0-abs(dot(vN,vV)),0.0,1.0);float a=0.1+0.6*pow(f,1.5)+0.06*sin(uTime*2.0);gl_FragColor=vec4(uColor,a);}',
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
     });
     const gGeo = new THREE.BoxGeometry(BOOK_W, BOOK_W / 0.6265, BOOK_D);

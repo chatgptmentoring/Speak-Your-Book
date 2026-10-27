@@ -103,7 +103,7 @@ export function createSky({ lowEnd = false } = {}) {
         vec3 base=mix(c1,c2,smoothstep(-0.6,0.9,sin(b)));
         base=mix(base,c3,smoothstep(0.4,1.0,sin(b*0.47+1.3))*0.6);
         float diff=smoothstep(-0.12,0.65,dot(vP,uSun));
-        float rim=pow(1.0-max(dot(vN,vV),0.0),2.6);
+        float rim=pow(clamp(1.0-dot(vN,vV),0.0,1.0),2.6);
         vec3 col=base*diff*1.15+vec3(0.45,0.6,1.0)*rim*(0.25+0.9*diff)+vec3(0.08,0.04,0.12)*(1.0-diff);
         gl_FragColor=vec4(col,1.0);
       }`,
@@ -135,7 +135,7 @@ export function createSky({ lowEnd = false } = {}) {
   const moonMat = planetMat.clone();
   moonMat.fragmentShader = `uniform vec3 uSun;varying vec3 vN;varying vec3 vP;varying vec3 vV;
     float hash(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
-    void main(){float c=0.7+0.3*hash(floor(vP*9.0));float diff=smoothstep(-0.05,0.5,dot(vP,uSun));float rim=pow(1.0-max(dot(vN,vV),0.0),3.0);
+    void main(){float c=0.7+0.3*hash(floor(vP*9.0));float diff=smoothstep(-0.05,0.5,dot(vP,uSun));float rim=pow(clamp(1.0-dot(vN,vV),0.0,1.0),3.0);
     gl_FragColor=vec4(vec3(0.85,0.82,0.9)*c*diff+vec3(0.5,0.5,0.8)*rim*0.3,1.0);}`;
   moonMat.uniforms = { uSun: { value: SUN } };
   const moon = new THREE.Mesh(new THREE.SphereGeometry(3.2, 48, 32), moonMat);

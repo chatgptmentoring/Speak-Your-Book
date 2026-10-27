@@ -2,7 +2,7 @@
 /**
  * Plugin Name: LCC Virtual Book Fair
  * Description: The Virtual Book Fair of Life Coach Code as a full-screen page on this site, with its AI guide, the live event's programme and messages to the authors. Set it up in Settings > Virtual Book Fair.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Life Coach Code
  * Author URI: https://www.lifecoachcode.com
  * License: GPL-2.0-or-later
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('LCC_VBF_VERSION', '1.2.0');
+define('LCC_VBF_VERSION', '1.2.1');
 define('LCC_VBF_DIR', plugin_dir_path(__FILE__));
 define('LCC_VBF_URL', plugin_dir_url(__FILE__));
 define('LCC_VBF_BASENAME', plugin_basename(__FILE__));
