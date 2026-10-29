@@ -2,7 +2,7 @@
 Contributors: lifecoachcode
 Requires at least: 5.8
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPL-2.0-or-later
 
 The Virtual Book Fair of Life Coach Code as a full-screen page on this site: a walkable 3D book

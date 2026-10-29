@@ -354,7 +354,7 @@ window.FAIR_BOOKS = [
     title: 'Truly Yours, Life',
     subtitle: 'A Journey Through Expectation, Rewiring, and Coherence',
     author: 'Yevheniya Shalimova',
-    credentials: 'PCC',
+    credentials: 'PCC, ICF',
     tags: ['Memoir', 'Personal development', 'Leadership'],
     aisles: ['stories', 'purpose'],
     hook: 'Resilience keeps us strong, but Coherence brings us home.',
@@ -888,7 +888,7 @@ window.FAIR_AUTHOR_EXTRAS = {
   },
   'yevheniya-shalimova': {
     photo: 'assets/img/authors/yevheniya-shalimova.webp',
-    bio: 'A globally recognised Executive Coach, credentialed PCC with the International Coaching Federation, and founder of The Shalimova Method®. Yevheniya draws on more than 2,300 coaching hours with leaders across 35 countries and advanced studies at Harvard, Yale and the Brain Academy, and is an Executive Contributor to Brainz Magazine.',
+    bio: 'A globally recognised Executive Coach, credentialed PCC with the International Coaching Federation, and founder of The Shalimova Method®. Yevheniya draws on more than 2,300 coaching hours with leaders across 35 countries and studies at Harvard, Yale and the Brain Academy, and is an Executive Contributor to Brainz Magazine.',
     inbox: 'evgenia7shalimova@gmail.com',
     website: 'https://theshalimovamethod.com/',
     websiteByLCC: true,
